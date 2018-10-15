@@ -8,12 +8,12 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   endif()
 endif()
 
-project(trophy_mount)
+project(TrophaxSE)
 
 include("${VITASDK}/share/vita.cmake" REQUIRED)
 
 set(VITA_APP_NAME ${PROJECT_NAME})
-set(VITA_TITLEID  "TROPMOUNT")
+set(VITA_TITLEID  "TROPHAXSE")
 
 set(VITA_VERSION  "01.00")
 
