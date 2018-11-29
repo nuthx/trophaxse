@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <inttypes.h>
 
+
 typedef struct PsvDebugScreenFont {
 	unsigned char* glyphs, width, height, first, last, size_w, size_h;
 } PsvDebugScreenFont;

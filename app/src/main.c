@@ -179,8 +179,8 @@ int getFileSize(const char *file) {
 
 
 int knomn_pfs_ids[] = {
-  0x3E8,
   0x12F,
+  0x3E8,
 };
 
 int pfsMount(const char *path) {
@@ -195,7 +195,7 @@ int pfsMount(const char *path) {
 	args.desired_mount_point = NULL;
 	args.klicensee = klicensee;
 	args.mount_point = g_currentMount;
-        
+	
 	for(int i=0;i<sizeof(knomn_pfs_ids) / sizeof(int); i++){
 
 		args.id = knomn_pfs_ids[i];
@@ -269,8 +269,8 @@ start:
             memcpy(&titledest, strstr(sfm,"<title-name>") + sizeof("<title-name>") - 1, len);
             titledest[len] = 0;
             
-            char name[1024];
-            sprintf(name,"%s (%s)\n",titledest,dir.d_name);
+            char name[1028];
+            sprintf(name,"%.45s (%s)\n",titledest,dir.d_name);
             
             strcpy(title_list[a].path, name);
             a += 1;
@@ -286,7 +286,7 @@ start:
     do
     {
         char buf[256];
-        strncpy(buf, "**** TropHax SE ****", sizeof(buf));
+        strncpy(buf, "**** TropHax StandAlone Edition ****", sizeof(buf));
         printf("\e[%i;%iH%s", 1, CENTERX(buf), buf);
         strncpy(buf, "Choose a game", sizeof(buf));
         printf("\e[%i;%iH%s", 2, CENTERX(buf), buf);
@@ -331,8 +331,8 @@ start:
         {
                 psvDebugScreenInit();
                 printf("\n");
-                printf("Preforming TrophyPatcher Operations Please wait ...");
-                
+                printf("Preforming TrophyPatcher Operations Please wait ...\n");
+				
                 int ret = sceAppMgrUmount("app0:");
                 if(ret < 0){
                         printf("sceAppMgrUmount() failed. ret = 0x%x\n", ret);
@@ -345,12 +345,21 @@ start:
 
                 sprintf(kplugin_path, "ux0:app/%s/module/kernel.skprx", titleid);
                 sprintf(uplugin_path, "ux0:app/%s/module/user.suprx", titleid);
-
+				printf("kplugin_path: %s\n",kplugin_path);
+				printf("uplugin_path: %s\n",uplugin_path);
                 int kernel_modid, user_modid;
 
                 kernel_modid = taiLoadStartKernelModule(kplugin_path, 0, NULL, 0);
+				if(kernel_modid < 0){
+                        printf("taiLoadStartKernelModule() failed. ret = 0x%x\n", kernel_modid);
+                }	
                 user_modid = sceKernelLoadStartModule(uplugin_path, 0, NULL, 0, NULL, NULL);
-
+				if(user_modid < 0){
+                        printf("sceKernelLoadStartModule() failed. ret = 0x%x\n", user_modid);
+                }
+				
+				
+				printf("Setting up memory...");
 
                 char trophy_path[0x200];
                 
@@ -382,14 +391,15 @@ start:
                 len +=2;
                 memcpy(&commid, strstr(name,"(") + sizeof("(") - 1, len);
                 commid[len] = 0;
+				printf(" OK\n");
                 sprintf(trophy_path, "ur0:user/00/trophy/data/%s/", commid);
+				
                 ret = pfsMount(trophy_path);
                 if(ret < 0){
                         printf("pfsMount() failed. ret = 0x%x\n", ret);
                         while(1){};
                 }
-                
-                
+               
                 sprintf(trptitlepath,"%s/TRPTITLE.DAT",g_currentMount);
                     
                 fd = sceIoOpen(trptitlepath,SCE_O_RDONLY, 0777);
@@ -410,24 +420,93 @@ start:
                         while(1){};
                 }
 
-                
-                if (strcmp(titleidOfGame,"NPXS10007") == 0)
-                {
-                ret = sceAppMgrGameDataMount("pd0:/app/NPXS10007",0,0,g_currentMount);
-                if(ret < 0){
-                        printf("sceAppMgrGameDataMount() failed. ret = 0x%x\n", ret);
-                        while(1){};
-                }
-                }
-                else
-                {
-                sprintf(path,"ux0:/app/%s",titleidOfGame);
+
+				
+				//Try find where trophy.trp is located.
+				printf("Locating trophy.trp...\n");
+				
+				char location[0x1028];
+				memset(location,0x0,0x1028);
+				char checkPath[0x1028];
+				
+				memset(checkPath,0x00,0x1028);
+				sprintf(checkPath,"ux0:/patch/%s/sce_sys/trophy/%s/TROPHY.TRP",titleidOfGame,commid);
+				
+				if(getFileSize(checkPath) >=0)
+				{
+					sprintf(location,"ux0:/patch");
+					goto Found;
+				}
+				
+				memset(checkPath,0x00,0x1028);
+				sprintf(checkPath,"grw0:/patch/%s/sce_sys/trophy/%s/TROPHY.TRP",titleidOfGame,commid);
+				
+				if(getFileSize(checkPath) >=0)
+				{
+					sprintf(location,"grw0:/patch");
+					goto Found;
+				}
+				
+				memset(checkPath,0x00,0x1028);
+				sprintf(checkPath,"ur0:/patch/%s/sce_sys/trophy/%s/TROPHY.TRP",titleidOfGame,commid);
+				
+				if(getFileSize(checkPath) >=0)
+				{
+					sprintf(location,"ur0:/patch");
+					goto Found;
+				}
+				
+				memset(checkPath,0x00,0x1028);
+				sprintf(checkPath,"ux0:/app/%s/sce_sys/trophy/%s/TROPHY.TRP",titleidOfGame,commid);
+				
+				if(getFileSize(checkPath) >=0)
+				{
+					sprintf(location,"ux0:/app");
+					goto Found;
+				}
+				
+				memset(checkPath,0x00,0x1028);
+				sprintf(checkPath,"gro0:/app/%s/sce_sys/trophy/%s/TROPHY.TRP",titleidOfGame,commid);
+				
+				if(getFileSize(checkPath) >=0)
+				{
+					sprintf(location,"gro0:/app");
+					goto Found;
+				}
+				memset(checkPath,0x00,0x1028);
+				sprintf(checkPath,"ur0:/app/%s/sce_sys/trophy/%s/TROPHY.TRP",titleidOfGame,commid);
+				
+				if(getFileSize(checkPath) >=0)
+				{
+					sprintf(location,"ur0:/app");
+					goto Found;
+				}
+				
+				memset(checkPath,0x00,0x1028);
+				sprintf(checkPath,"pd0:/app/%s/sce_sys/trophy/%s/TROPHY.TRP",titleidOfGame,commid);
+				
+				if(getFileSize(checkPath) >=0)
+				{
+					sprintf(location,"pd0:/app"); //Welcome Park
+					goto Found;
+				}
+				
+				printf("Cound not find %s\n",titleidOfGame);
+				while(1){};
+				
+Found:
+				
+				printf("Found! - %s is in %s/%s\n",commid,location,titleidOfGame);
+				
+				
+				sprintf(path,"%s/%s",location,titleidOfGame);
                 ret = sceAppMgrGameDataMount(path,0,0,g_currentMount);
                 if(ret < 0){
                         printf("sceAppMgrGameDataMount() failed. ret = 0x%x\n", ret);
                         while(1){};
                 }
-                }
+				
+
                 
 
                 
@@ -457,11 +536,10 @@ start:
                 sprintf(path,"ux0:app/%s/sce_sys/trophy/%s",titleid,commid);
                 sceIoMkdir(path,0006);
                 sprintf(path,"ux0:app/%s/sce_sys/trophy/%s/TROPHY.TRP",titleid,commid);
-                
+				
                 ret = WriteFile(path,trpfile,size);
                 if(ret < 0){
                         printf("WriteFile() failed. ret = 0x%x\n", ret);
-                        while(1){};
                 }
                 }
                 else
@@ -493,7 +571,6 @@ start:
                 }
                 
                 
-                printf("OK!\n");
                 //Setup trophys
                 
                 printf("Setting up Trophys! Please wait ...");
@@ -585,6 +662,13 @@ start:
                 
                 printf("OK!\n");
                 
+				printf("All prep done!\n");
+				sceKernelDelayThread(1000);
+				psvDebugScreenInit();
+				
+				//All done!
+				
+				
                 SceNpTrophyId id = 0;
                 SceNpTrophyId platid;
                 
