@@ -24,7 +24,7 @@
 #define WINDOW_HEIGHT (SCREEN_ROW - 4)
 #define DISPLAY_COLOR_FORMAT SCE_GXM_COLOR_FORMAT_A8B8G8R8
 
-
+int oWindow = 0;
 SceCtrlData pad;
 
 /*
@@ -102,7 +102,7 @@ void updateCommonDiag()
 {
         int ret = 0;
         SceCommonDialogUpdateParam	updateParam;
-        ScePVoid color;
+        ScePVoid color = (ScePVoid)0xFFFFFF;
 
         memset(&updateParam, 0, sizeof(updateParam));
         updateParam.renderTarget.colorFormat    = DISPLAY_COLOR_FORMAT;
@@ -229,8 +229,9 @@ void sceNpTrophySetupDialogParamInit(SceNpTrophySetupDialogParam* param)
 
 int main() {
         gxm_init();
+		psvDebugScreenInit();
 start:
-        psvDebugScreenInit();
+        psvDebugScreenClear();
 
                 
         int size = 0;
@@ -278,11 +279,7 @@ start:
         sceIoDclose(dfd);
 
         int x = 1, y = 1, selection = 0, window = 0;
-
-        
-        
-
-
+	
     do
     {
         char buf[256];
@@ -306,10 +303,12 @@ start:
 
         if (pad.buttons == SCE_CTRL_UP)
             {
-                if (selection <= size - WINDOW_HEIGHT)
+                if (selection <= size - WINDOW_HEIGHT){
                     window -= 1;
-                if (window < 0)
+				}
+                if (window < 0){
                     window = 0;
+				}
                 selection -= 1;
                 if (selection < 0)
                     selection = 0;
@@ -317,11 +316,12 @@ start:
             }
         if (pad.buttons == SCE_CTRL_DOWN)
             {
-                if (selection >= WINDOW_HEIGHT - 1)
-                
+                if (selection >= WINDOW_HEIGHT - 1){
                     window += 1;
-                if (window > size - WINDOW_HEIGHT)
+				}
+                if (window > size - WINDOW_HEIGHT){
                     window = (size - WINDOW_HEIGHT < 0) ? 0 : size - WINDOW_HEIGHT;
+				}
                 selection += 1;
                 if (selection + 1 > size - 1)
                     selection = size - 1;
@@ -329,8 +329,7 @@ start:
             }
         if (pad.buttons == SCE_CTRL_CROSS)
         {
-                psvDebugScreenInit();
-                printf("\n");
+                psvDebugScreenClear();
                 printf("Preforming TrophyPatcher Operations Please wait ...\n");
 				
                 int ret = sceAppMgrUmount("app0:");
@@ -663,60 +662,302 @@ Found:
                 printf("OK!\n");
                 
 				printf("All prep done!\n");
-				sceKernelDelayThread(1000);
-				psvDebugScreenInit();
+				sceKernelDelayThread(500000);
 				
 				//All done!
+TrophyMenu:
+				//Draw new menu
+				psvDebugScreenClear(); // Clear the screen!
+				x = 1, y = 1, selection = 0, window = 0;
 				
+				size = 3;
+				paths *option_list = malloc(sizeof(paths)*size);
+
 				
-                SceNpTrophyId id = 0;
-                SceNpTrophyId platid;
+				//set options
+				strcpy(option_list[0].path, "Unlock a Trophy");
+				strcpy(option_list[1].path, "Unlock All Trophys");
+				strcpy(option_list[2].path, "Exit");
+				
+				while(1)
+					{
+					char buf[256];
+					strncpy(buf, "**** TropHax StandAlone Edition ****", sizeof(buf));
+					printf("\e[%i;%iH%s", 1, CENTERX(buf), buf);
+					strncpy(buf, "Choose an Option:", sizeof(buf));
+					printf("\e[%i;%iH%s", 2, CENTERX(buf), buf);
+					y = 3;
+					int max = (size < WINDOW_HEIGHT) ? size : WINDOW_HEIGHT;
+					for (int i=0; i < max; i++) {
+						if (i+window == selection)
+							psvDebugScreenSetFgColor(0xFF0000);
+						printf("\e[%i;%iH%s", y, x, option_list[i+window].path);
+						y += 1;
+						psvDebugScreenSetFgColor(0xFFFFFF);
+					}
+					strncpy(buf, "U/D: Select Option  X: Confirm  O: Return", sizeof(buf));
+					printf("\e[%i;%iH%s", SCREEN_ROW, CENTERX(buf), buf);
+					memset(&pad, 0, sizeof(pad));
+					sceCtrlPeekBufferPositive(0, &pad, 1);
+
+					if (pad.buttons == SCE_CTRL_UP)
+					{
+						if (selection <= size - WINDOW_HEIGHT){
+							window -= 1;
+						}
+						if (window < 0){
+							window = 0;
+						}
+						selection -= 1;
+						if (selection < 0)
+							selection = 0;
+						sceKernelDelayThread(150000);
+					}
+				if (pad.buttons == SCE_CTRL_DOWN)
+					{
+						if (selection >= WINDOW_HEIGHT - 1){
+							window += 1;
+						}
+						if (window > size - WINDOW_HEIGHT){
+							window = (size - WINDOW_HEIGHT < 0) ? 0 : size - WINDOW_HEIGHT;
+						}
+						selection += 1;
+						if (selection + 1 > size - 1)
+							selection = size - 1;
+						sceKernelDelayThread(150000);
+					}
+						
+					if(pad.buttons == SCE_CTRL_CIRCLE)
+					{
+						psvDebugScreenClear();
+						ret = sceNpTrophyDestroyContext(trophyContext);
+						if(ret < 0){
+								printf("sceNpTrophyDestroyContext() failed. ret = 0x%x\n", ret);
+								while(1){};
+						}
+						
+						ret = sceNpTrophyDestroyHandle(handle);
+						if(ret < 0){
+								printf("sceNpTrophyDestroyHandle() failed. ret = 0x%x\n", ret);
+								while(1){};
+						}
+						
+						ret = sceNpTrophyTerm();
+						if(ret < 0){
+								printf("sceNpTrophyTerm() failed. ret = 0x%x\n", ret);
+								while(1){};
+						}
+						
+						
+						sceKernelStopUnloadModule(user_modid, 0, NULL, 0, NULL, NULL);
+						taiStopUnloadKernelModule(kernel_modid, 0, NULL, 0, NULL, NULL); 
+						sceKernelDelayThread(150000);
+						goto start;
+					}
+					
+					if (pad.buttons == SCE_CTRL_CROSS)
+					{
+					
+						if(selection == 0)
+						{
+							//Show trophy selection menu
+							x = 1, y = 1, selection = 0, window = 0;
+							psvDebugScreenClear();
+							printf("Obtaining trophy count..");
+							SceNpTrophyGameDetails gameDetails = {0};
+							gameDetails.size = sizeof(SceNpTrophyGameDetails);
+							sceNpTrophyGetGameInfo(trophyContext,handle,&gameDetails,NULL);
+							size = gameDetails.numTrophies;
+							printf(" %i\n",size);
+							
+							paths *trophy_list = malloc(sizeof(paths)*size);
+							SceNpTrophyDetails trophyDetails = {0};
+							trophyDetails.size = sizeof(SceNpTrophyDetails);
+							printf("Obtaining trophy names...");
+							for (int i=0; i < size; i++)
+							{
+								sceNpTrophyGetTrophyInfo(trophyContext,handle,i,&trophyDetails,NULL);
+								if(strcmp((char *)trophyDetails.name,"") !=0)
+								{
+									sprintf(trophy_list[i].path,"%.50s (%i)",trophyDetails.name,i);
+								}
+								else
+								{
+									sprintf(trophy_list[i].path,"Hidden Trophy (%i)",i);
+								}
+							}
+							printf("OK!\n");
+							sceKernelDelayThread(500000);
+selectTrophyMenu:
+							psvDebugScreenClear();
+							while(1)
+								{
+									char buf[256];
+									strncpy(buf, "**** TropHax StandAlone Edition ****", sizeof(buf));
+									printf("\e[%i;%iH%s", 1, CENTERX(buf), buf);
+									strncpy(buf, "Choose a trophy:", sizeof(buf));
+									printf("\e[%i;%iH%s", 2, CENTERX(buf), buf);
+									y = 3;
+									int max = (size < WINDOW_HEIGHT) ? size : WINDOW_HEIGHT;
+									for (int i=0; i < max; i++) {
+										if (i+window == selection)
+											psvDebugScreenSetFgColor(0xFF0000);
+										printf("\e[%i;%iH%s", y, x, trophy_list[i+window].path);
+										y += 1;
+										psvDebugScreenSetFgColor(0xFFFFFF);
+									}
+									strncpy(buf, "U/D: Select Trophy  X: Unlock  O: Return", sizeof(buf));
+									printf("\e[%i;%iH%s", SCREEN_ROW, CENTERX(buf), buf);
+									memset(&pad, 0, sizeof(pad));
+									sceCtrlPeekBufferPositive(0, &pad, 1);
+									
+									if (pad.buttons == SCE_CTRL_UP)
+									{
+										if (selection <= size - WINDOW_HEIGHT){
+											window -= 1;
+										}
+										if (window < 0){
+											window = 0;
+										}
+										selection -= 1;
+										if (selection < 0)
+											selection = 0;
+										sceKernelDelayThread(150000);
+									}
+									if (pad.buttons == SCE_CTRL_DOWN)
+									{
+										if (selection >= WINDOW_HEIGHT - 1){
+											window += 1;
+										}
+										if (window > size - WINDOW_HEIGHT){
+											window = (size - WINDOW_HEIGHT < 0) ? 0 : size - WINDOW_HEIGHT;
+										}
+										selection += 1;
+										if (selection + 1 > size - 1)
+											selection = size - 1;
+										sceKernelDelayThread(150000);
+									}
+									  if (pad.buttons == SCE_CTRL_CROSS)
+									  {
+										  psvDebugScreenClear();
+										  printf("Unlocking trophy %i\n",selection);
+										  SceNpTrophyId id = selection;
+										  SceNpTrophyId platid;
+										  
+										  ret = sceNpTrophyUnlockTrophy(trophyContext,handle,id,&platid);
+											if(ret < 0){
+													if(ret == 0x8055160f)
+													{
+														printf("Trophy %li is allready unlocked.\n",id);
+													}
+													else
+													{
+														printf("sceNpTrophyUnlockTrophy() failed. ret = 0x%x\n", ret);
+													}
+											}
+											else
+											{
+												printf("Successfully unlocked trophy %li\n",id);
+												
+												SceNpTrophyDetails trophyDetails = {0};
+												trophyDetails.size = sizeof(SceNpTrophyDetails);
+												sceNpTrophyGetTrophyInfo(trophyContext,handle,id,&trophyDetails,NULL);
+												memset(trophy_list[id].path,0x00,sizeof(trophy_list[id].path));
+												sprintf(trophy_list[id].path,"%.50s (%li)",trophyDetails.name,id);
+												
+											}
+											sceKernelDelayThread(500000);
+											goto selectTrophyMenu;
+									  }
+									  if (pad.buttons == SCE_CTRL_CIRCLE)
+									  {
+										  sceKernelDelayThread(150000);
+										  goto TrophyMenu;
+									  }
+									  if(window != oWindow)
+									  {
+											psvDebugScreenClear();
+											oWindow = window;
+									  }
+								}
+							
+							
+						}
+						else if(selection == 1)
+						{
+							psvDebugScreenClear(); //clear screen
+							SceNpTrophyId id = 0;
+							SceNpTrophyId platid;
+							
+							while (1)
+							{
+							ret = sceNpTrophyUnlockTrophy(trophyContext,handle,id,&platid);
+							if(ret < 0){
+									if(ret == 0x8055160f)
+									{
+										printf("Trophy %li is allready unlocked.\n",id);
+									}
+									else if(ret == 0x8055160e)
+									{
+										printf("All trophys unlocked!\n");
+										sceKernelDelayThread(500000);
+										goto TrophyMenu;
+									}
+									else
+									{
+										printf("sceNpTrophyUnlockTrophy() failed. ret = 0x%x\n", ret);
+									}
+							}
+							else
+							{
+								printf("Successfully unlocked trophy %li\n",id);
+							}
+							id ++;
+						}
+						
+					}
+						else if(selection == 2)
+						{
+							psvDebugScreenClear();
+							ret = sceNpTrophyDestroyContext(trophyContext);
+							if(ret < 0){
+									printf("sceNpTrophyDestroyContext() failed. ret = 0x%x\n", ret);
+									while(1){};
+							}
+							
+							ret = sceNpTrophyDestroyHandle(handle);
+							if(ret < 0){
+									printf("sceNpTrophyDestroyHandle() failed. ret = 0x%x\n", ret);
+									while(1){};
+							}
+							
+							ret = sceNpTrophyTerm();
+							if(ret < 0){
+									printf("sceNpTrophyTerm() failed. ret = 0x%x\n", ret);
+									while(1){};
+							}
+							
+							
+							sceKernelStopUnloadModule(user_modid, 0, NULL, 0, NULL, NULL);
+							taiStopUnloadKernelModule(kernel_modid, 0, NULL, 0, NULL, NULL); 
+							sceKernelDelayThread(150000);
+							goto start;
+						}
+				}
+		
+
                 
-                while (1)
-                {
-                ret = sceNpTrophyUnlockTrophy(trophyContext,handle,id,&platid);
-                if(ret < 0){
-                        printf("sceNpTrophyUnlockTrophy() failed. ret = 0x%x\n", ret);
-                        if(ret == 0x8055160e)
-                        {
-                            printf("All trophys unlocked!\n");
-                            break;
-                        }
-                }
-                else
-                {
-                        printf("Unlocked Trophy: %li ret: 0x%x\n",id,ret);
-                }
+
                 
-                id ++;
-                }
-                
-                ret = sceNpTrophyDestroyContext(trophyContext);
-                if(ret < 0){
-                        printf("sceNpTrophyDestroyContext() failed. ret = 0x%x\n", ret);
-                        while(1){};
-                }
-                
-                ret = sceNpTrophyDestroyHandle(handle);
-                if(ret < 0){
-                        printf("sceNpTrophyDestroyHandle() failed. ret = 0x%x\n", ret);
-                        while(1){};
-                }
-                
-                ret = sceNpTrophyTerm();
-                if(ret < 0){
-                        printf("sceNpTrophyTerm() failed. ret = 0x%x\n", ret);
-                        while(1){};
-                }
-                
-                
-                sceKernelStopUnloadModule(user_modid, 0, NULL, 0, NULL, NULL);
-                taiStopUnloadKernelModule(kernel_modid, 0, NULL, 0, NULL, NULL); 
-                
-                goto start;
-                
-        }
-    } while (pad.buttons != SCE_CTRL_CIRCLE);
+			}
+		}
+	if(window != oWindow)
+	{
+		psvDebugScreenClear();
+		oWindow = window;
+	}
+	
+	}while (pad.buttons != SCE_CTRL_CIRCLE);
     
 
 

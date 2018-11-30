@@ -92,15 +92,14 @@ static size_t psvDebugScreenEscape(const unsigned char *str) {
 	return 0;
 }
 int psvDebugScreenInit() {
-#ifdef NO_psvDebugScreenInit
-	return 0;/* avoid linking non-initializer (prx) with sceDisplay/sceMemory */
-#else
 	mutex = sceKernelCreateMutex("log_mutex", 0, 0, NULL);
 	SceUID displayblock = sceKernelAllocMemBlock("display", SCE_KERNEL_MEMBLOCK_TYPE_USER_CDRAM_RW, SCREEN_FB_SIZE, NULL);
 	sceKernelGetMemBlockBase(displayblock, (void**)&base);
 	SceDisplayFrameBuf frame = { sizeof(frame), base, SCREEN_FB_WIDTH, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+	//reset X/Y
+	coordX = 0;
+	coordY = 0; 
 	return sceDisplaySetFrameBuf(&frame, SCE_DISPLAY_SETBUF_NEXTFRAME);
-#endif
 }
 
 int psvDebugScreenPuts(const char * _text) {
@@ -172,6 +171,14 @@ void psvDebugScreenSetFgColor(uint32_t rgb){
 }
 void psvDebugScreenSetBgColor(uint32_t rgb){
 	psvDebugScreenPrintf("\e[48;2;%lu;%lu;%lum", (rgb>>16)&0xFF, (rgb>>8)&0xFF, rgb&0xFF);
+}
+void psvDebugScreenClear(){
+	psvDebugScreenPrintf("                                                                                                                                                                                                                                                                                                                                                                         ");
+	psvDebugScreenPrintf("                                                                                                                                                                                                                                                                                                                                                                         ");
+	psvDebugScreenPrintf("                                                                                                                                                                                                                                                                                                                                                                         ");
+	psvDebugScreenPrintf("                                                                                                                                                                                                                                                                                                                                                                         ");
+	coordX = 0;
+	coordY = 0;
 }
 #undef F
 #endif
