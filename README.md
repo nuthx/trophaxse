@@ -10,6 +10,8 @@ TropHAX.suprx TrophyPather or PSVTrophyIsGood
 # TropHAX-SE  
 TropHAX Standalone Edition  
 A homebrew app that can unlock trophys for any game.  
+Unlike the original TropHAX.SUPRX however, this is compadible with 100% of games!  
+You simply need the game installed and the trophy files inside ur0:/trophy and you can unlock stuffs!  
   
 # Credits
 SilicaAndPina - Lead developer, - working out how trophys work and stuff.  
