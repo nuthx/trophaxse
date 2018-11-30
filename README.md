@@ -1,5 +1,5 @@
 # r/vitahacks trophy-hacking censorship continues!  
-u/gee_gee_e removed my post about TrophaxSE just like they did with the original trophax.suprx    
+u/GeeGee-E removed my post about TrophaxSE just like they did with the original trophax.suprx    
 please message the moderators of r/vitahacks and tell them to leave trophax alone. #FreeTROPHAX  
 https://www.reddit.com/message/compose?to=%2Fr%2Fvitahacks  
 
