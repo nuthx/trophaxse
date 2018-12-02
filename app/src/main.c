@@ -14,6 +14,7 @@
 
 #include "debugScreen.h"
 #include "np.h"
+#include "rtc.h"
 
 #define printf psvDebugScreenPrintf
 #define F psvDebugScreenFont
@@ -225,6 +226,28 @@ void sceNpTrophySetupDialogParamInit(SceNpTrophySetupDialogParam* param)
 }
 
 
+int setSecureTick(unsigned long long int psTime)
+{
+	printf("setSecureTick: %llx\n",psTime);
+
+	printf("Creating splits..\n");
+	char hexint[15];
+	memset(hexint,0,15);
+
+	sprintf(hexint,"%llx",psTime);
+
+	char ts1[7] = {hexint[0],hexint[1],hexint[2],hexint[3],hexint[4],hexint[5],0x00};
+	unsigned long long int split1 = (unsigned int)strtoul(ts1, NULL, 16);
+	printf("Split1: %llx\n",split1);
+
+
+	char ts2[10] = {hexint[6],hexint[7],hexint[8],hexint[9],hexint[10],hexint[11],hexint[12],hexint[13],hexint[14],0x00};
+	unsigned long long int split2 = (unsigned int)strtoul(ts2, NULL, 16);
+	printf("Split2: %llx\n",split2);
+
+	return SetTrophyTimes(split2,split1);
+}
+
 
 
 int main() {
@@ -429,33 +452,6 @@ start:
 				char checkPath[0x1028];
 				
 				memset(checkPath,0x00,0x1028);
-				sprintf(checkPath,"ux0:/patch/%s/sce_sys/trophy/%s/TROPHY.TRP",titleidOfGame,commid);
-				
-				if(getFileSize(checkPath) >=0)
-				{
-					sprintf(location,"ux0:/patch");
-					goto Found;
-				}
-				
-				memset(checkPath,0x00,0x1028);
-				sprintf(checkPath,"grw0:/patch/%s/sce_sys/trophy/%s/TROPHY.TRP",titleidOfGame,commid);
-				
-				if(getFileSize(checkPath) >=0)
-				{
-					sprintf(location,"grw0:/patch");
-					goto Found;
-				}
-				
-				memset(checkPath,0x00,0x1028);
-				sprintf(checkPath,"ur0:/patch/%s/sce_sys/trophy/%s/TROPHY.TRP",titleidOfGame,commid);
-				
-				if(getFileSize(checkPath) >=0)
-				{
-					sprintf(location,"ur0:/patch");
-					goto Found;
-				}
-				
-				memset(checkPath,0x00,0x1028);
 				sprintf(checkPath,"ux0:/app/%s/sce_sys/trophy/%s/TROPHY.TRP",titleidOfGame,commid);
 				
 				if(getFileSize(checkPath) >=0)
@@ -490,7 +486,7 @@ start:
 					goto Found;
 				}
 				
-				printf("Cound not find %s\n",titleidOfGame);
+				printf("Cound not find %s (Possibly game not installed?)\n",titleidOfGame);
 				while(1){};
 				
 Found:
@@ -499,7 +495,7 @@ Found:
 				
 				
 				sprintf(path,"%s/%s",location,titleidOfGame);
-                ret = sceAppMgrGameDataMount(path,0,0,g_currentMount);
+                ret = sceAppMgrGameDataMount(path,0,0,g_currentMount); //GameDataMount mounts WITH patches, so no need to check for them
                 if(ret < 0){
                         printf("sceAppMgrGameDataMount() failed. ret = 0x%x\n", ret);
                         while(1){};
@@ -727,7 +723,553 @@ TrophyMenu:
 						sceKernelDelayThread(150000);
 					}
 						
-					if(pad.buttons == SCE_CTRL_CIRCLE)
+				if(pad.buttons == SCE_CTRL_CIRCLE)
+				{
+					psvDebugScreenClear();
+					ret = sceNpTrophyDestroyContext(trophyContext);
+					if(ret < 0){
+							printf("sceNpTrophyDestroyContext() failed. ret = 0x%x\n", ret);
+							while(1){};
+					}
+					
+					ret = sceNpTrophyDestroyHandle(handle);
+					if(ret < 0){
+							printf("sceNpTrophyDestroyHandle() failed. ret = 0x%x\n", ret);
+							while(1){};
+					}
+					
+					ret = sceNpTrophyTerm();
+					if(ret < 0){
+							printf("sceNpTrophyTerm() failed. ret = 0x%x\n", ret);
+							while(1){};
+					}
+					
+					
+					sceKernelStopUnloadModule(user_modid, 0, NULL, 0, NULL, NULL);
+					taiStopUnloadKernelModule(kernel_modid, 0, NULL, 0, NULL, NULL); 
+					sceKernelDelayThread(150000);
+					goto start;
+				}
+				
+				if (pad.buttons == SCE_CTRL_CROSS)
+				{
+				
+					if(selection == 0)
+					{
+						//Show trophy selection menu
+						x = 1, y = 1, selection = 0, window = 0;
+						psvDebugScreenClear();
+						printf("Obtaining trophy count..");
+						SceNpTrophyGameDetails gameDetails = {0};
+						gameDetails.size = sizeof(SceNpTrophyGameDetails);
+						sceNpTrophyGetGameInfo(trophyContext,handle,&gameDetails,NULL);
+						size = gameDetails.numTrophies;
+						printf(" %i\n",size);
+						
+						paths *trophy_list = malloc(sizeof(paths)*size);
+						SceNpTrophyDetails trophyDetails = {0};
+						trophyDetails.size = sizeof(SceNpTrophyDetails);
+						printf("Obtaining trophy names...");
+						for (int i=0; i < size; i++)
+						{
+							sceNpTrophyGetTrophyInfo(trophyContext,handle,i,&trophyDetails,NULL);
+							if(strcmp((char *)trophyDetails.name,"") !=0)
+							{
+								sprintf(trophy_list[i].path,"%.50s (%i)",trophyDetails.name,i);
+							}
+							else
+							{
+								sprintf(trophy_list[i].path,"Hidden Trophy (%i)",i);
+							}
+						}
+						printf("OK!\n");
+						sceKernelDelayThread(500000);
+selectTrophyMenu:
+						psvDebugScreenClear();
+						while(1)
+							{
+								char buf[256];
+								strncpy(buf, "**** TropHax StandAlone Edition ****", sizeof(buf));
+								printf("\e[%i;%iH%s", 1, CENTERX(buf), buf);
+								strncpy(buf, "Choose a trophy:", sizeof(buf));
+								printf("\e[%i;%iH%s", 2, CENTERX(buf), buf);
+								y = 3;
+								int max = (size < WINDOW_HEIGHT) ? size : WINDOW_HEIGHT;
+								for (int i=0; i < max; i++) {
+									if (i+window == selection)
+										psvDebugScreenSetFgColor(0xFF0000);
+									printf("\e[%i;%iH%s", y, x, trophy_list[i+window].path);
+									y += 1;
+									psvDebugScreenSetFgColor(0xFFFFFF);
+								}
+								strncpy(buf, "U/D: Select Trophy  X: Unlock  O: Return", sizeof(buf));
+								printf("\e[%i;%iH%s", SCREEN_ROW, CENTERX(buf), buf);
+								memset(&pad, 0, sizeof(pad));
+								sceCtrlPeekBufferPositive(0, &pad, 1);
+								
+								if (pad.buttons == SCE_CTRL_UP)
+								{
+									if (selection <= size - WINDOW_HEIGHT){
+										window -= 1;
+									}
+									if (window < 0){
+										window = 0;
+									}
+									selection -= 1;
+									if (selection < 0)
+										selection = 0;
+									sceKernelDelayThread(150000);
+								}
+								if (pad.buttons == SCE_CTRL_DOWN)
+								{
+									if (selection >= WINDOW_HEIGHT - 1){
+										window += 1;
+									}
+									if (window > size - WINDOW_HEIGHT){
+										window = (size - WINDOW_HEIGHT < 0) ? 0 : size - WINDOW_HEIGHT;
+									}
+									selection += 1;
+									if (selection + 1 > size - 1)
+										selection = size - 1;
+									sceKernelDelayThread(150000);
+								}
+								if (pad.buttons == SCE_CTRL_CROSS)
+								{
+												
+									psvDebugScreenClear(); // Clear the screen!
+									sceKernelDelayThread(200000);
+									
+									x = 1, y = 1;
+									int selection2 = 0;
+									int window2 = 0;
+									
+									int size2 = 2;
+									paths *timeList = malloc(sizeof(paths)*size2);
+
+									
+									//set options
+									strcpy(timeList[0].path, "Use Real SecureTick");
+									strcpy(timeList[1].path, "Use Fake SecureTick");
+									
+									while(1)
+										{
+										char buf[256];
+										strncpy(buf, "**** TropHax StandAlone Edition ****", sizeof(buf));
+										printf("\e[%i;%iH%s", 1, CENTERX(buf), buf);
+										strncpy(buf, "Choose an Option:", sizeof(buf));
+										printf("\e[%i;%iH%s", 2, CENTERX(buf), buf);
+										y = 3;
+										int max = (size2 < WINDOW_HEIGHT) ? size2 : WINDOW_HEIGHT;
+										for (int i=0; i < max; i++) {
+											if (i+window2 == selection2)
+												psvDebugScreenSetFgColor(0xFF0000);
+											printf("\e[%i;%iH%s", y, x, timeList[i+window2].path);
+											y += 1;
+											psvDebugScreenSetFgColor(0xFFFFFF);
+										}
+										strncpy(buf, "U/D: Select Option  X: Confirm", sizeof(buf));
+										printf("\e[%i;%iH%s", SCREEN_ROW, CENTERX(buf), buf);
+										memset(&pad, 0, sizeof(pad));
+										sceCtrlPeekBufferPositive(0, &pad, 1);
+
+										if (pad.buttons == SCE_CTRL_UP)
+										{
+											if (selection2 <= size2 - WINDOW_HEIGHT){
+												window2 -= 1;
+											}
+											if (window2 < 0){
+												window2 = 0;
+											}
+											selection2 -= 1;
+											if (selection2 < 0)
+												selection2 = 0;
+											sceKernelDelayThread(150000);
+										}
+									if (pad.buttons == SCE_CTRL_DOWN)
+										{
+											if (selection2 >= WINDOW_HEIGHT - 1){
+												window2 += 1;
+											}
+											if (window2 > size2 - WINDOW_HEIGHT){
+												window2 = (size2 - WINDOW_HEIGHT < 0) ? 0 : size2 - WINDOW_HEIGHT;
+											}
+											selection2 += 1;
+											if (selection2 + 1 > size2 - 1)
+												selection2 = size2 - 1;
+											sceKernelDelayThread(150000);
+										}
+									if (pad.buttons == SCE_CTRL_CROSS)
+									{
+										if(selection2 == 0)
+										{
+											  psvDebugScreenClear();
+											  printf("Unlocking trophy %i\n",selection);
+											  SceNpTrophyId id = selection;
+											  SceNpTrophyId platid;
+											  
+											  ret = sceNpTrophyUnlockTrophy(trophyContext,handle,id,&platid);
+												if(ret < 0){
+														if(ret == 0x8055160f)
+														{
+															printf("Trophy %li is allready unlocked.\n",id);
+														}
+														else
+														{
+															printf("sceNpTrophyUnlockTrophy() failed. ret = 0x%x\n", ret);
+														}
+												}
+												else
+												{
+													printf("Successfully unlocked trophy %li\n",id);
+													
+													SceNpTrophyDetails trophyDetails = {0};
+													trophyDetails.size = sizeof(SceNpTrophyDetails);
+													sceNpTrophyGetTrophyInfo(trophyContext,handle,id,&trophyDetails,NULL);
+													memset(trophy_list[id].path,0x00,sizeof(trophy_list[id].path));
+													sprintf(trophy_list[id].path,"%.50s (%li)",trophyDetails.name,id);
+													
+												}
+												sceKernelDelayThread(500000);
+												goto selectTrophyMenu;
+										}
+									
+										if(selection2 == 1)
+										{
+											psvDebugScreenClear();
+											sceKernelDelayThread(150000);
+											int selectedPartOfTime = 0;
+											
+											SceDateTime dateTime;
+											memset(&dateTime,0x00,sizeof(SceDateTime));
+											
+
+											SceRtcTick fakeTime = {0};
+											sceRtcGetCurrentTick(&fakeTime);
+											
+											sceRtcSetTick(&dateTime,&fakeTime);
+											while(1)
+											{
+
+												
+												char buf[256];
+												strncpy(buf, "**** TropHax StandAlone Edition ****", sizeof(buf));
+												printf("\e[%i;%iH%s\n", 1, CENTERX(buf), buf);
+												printf("Set SecureTick: (DD/MM/YY H:M:S)\n");
+
+												
+												if(selectedPartOfTime == 0)
+												{
+													psvDebugScreenSetFgColor(0xFF0000);
+												}
+												printf("%02d",dateTime.day);
+												psvDebugScreenSetFgColor(0xFFFFFF);
+												printf("/");
+												
+												if(selectedPartOfTime == 1)
+												{
+													psvDebugScreenSetFgColor(0xFF0000);
+												}
+												printf("%02d",dateTime.month);
+												psvDebugScreenSetFgColor(0xFFFFFF);
+												printf("/");
+												
+												if(selectedPartOfTime == 2)
+												{
+													psvDebugScreenSetFgColor(0xFF0000);
+												}
+												printf("%02d",dateTime.year);
+												psvDebugScreenSetFgColor(0xFFFFFF);
+												printf(" ");
+												
+												if(selectedPartOfTime == 3)
+												{
+													psvDebugScreenSetFgColor(0xFF0000);
+												}
+												printf("%02d",dateTime.hour);
+												psvDebugScreenSetFgColor(0xFFFFFF);
+												printf(":");
+												
+												if(selectedPartOfTime == 4)
+												{
+													psvDebugScreenSetFgColor(0xFF0000);
+												}
+												printf("%02d",dateTime.minute);
+												psvDebugScreenSetFgColor(0xFFFFFF);
+												printf(":");
+												
+												if(selectedPartOfTime == 5)
+												{
+													psvDebugScreenSetFgColor(0xFF0000);
+												}
+												printf("%02d",dateTime.second);
+												psvDebugScreenSetFgColor(0xFFFFFF);
+												printf("\n\nResulting timestamp:\n");
+												
+												printf("%llx",fakeTime.tick);
+												
+												strncpy(buf, "U/D: Increment/Decrement L/R: Part of Date  X: Confirm", sizeof(buf));
+												printf("\e[%i;%iH%s", SCREEN_ROW, CENTERX(buf), buf);
+												
+												memset(&pad, 0, sizeof(pad));
+												sceCtrlPeekBufferPositive(0, &pad, 1);
+												if(pad.buttons == SCE_CTRL_RIGHT)
+												{
+													selectedPartOfTime ++;
+													
+													if(selectedPartOfTime >= 5)
+													{
+														selectedPartOfTime = 5;
+													}
+													
+													sceKernelDelayThread(150000);
+												}
+												if(pad.buttons == SCE_CTRL_LEFT)
+												{
+													selectedPartOfTime --;
+													
+													if(selectedPartOfTime <= 0)
+													{
+														selectedPartOfTime = 0;
+													}
+													
+													sceKernelDelayThread(150000);
+												}
+												
+												if(pad.buttons == SCE_CTRL_UP)
+												{
+													if(selectedPartOfTime == 0)
+													{
+														dateTime.day ++;
+														
+														ret = sceRtcGetTick(&dateTime, &fakeTime);
+														if(ret < 0)
+														{
+															dateTime.day --;
+														}
+													}
+													if(selectedPartOfTime == 1)
+													{
+														dateTime.month ++;
+														
+														ret = sceRtcGetTick(&dateTime, &fakeTime);
+														if(ret < 0)
+														{
+															dateTime.month --;
+														}
+													}
+													if(selectedPartOfTime == 2)
+													{
+														dateTime.year ++;
+														
+														ret = sceRtcGetTick(&dateTime, &fakeTime);
+														if(ret < 0)
+														{
+															dateTime.year --;
+														}
+													}
+													if(selectedPartOfTime == 3)
+													{
+														dateTime.hour ++;
+														
+														ret = sceRtcGetTick(&dateTime, &fakeTime);
+														if(ret < 0)
+														{
+															dateTime.hour --;
+														}
+													}
+													if(selectedPartOfTime == 4)
+													{
+														dateTime.minute ++;
+														
+														ret = sceRtcGetTick(&dateTime, &fakeTime);
+														if(ret < 0)
+														{
+															dateTime.minute --;
+														}
+													}
+													if(selectedPartOfTime == 5)
+													{
+														dateTime.second ++;
+														
+														ret = sceRtcGetTick(&dateTime, &fakeTime);
+														if(ret < 0)
+														{
+															dateTime.second --;
+														}
+													}
+													sceKernelDelayThread(150000);
+												}
+												
+												if(pad.buttons == SCE_CTRL_DOWN)
+												{
+													if(selectedPartOfTime == 0)
+													{
+														dateTime.day --;
+														
+														ret = sceRtcGetTick(&dateTime, &fakeTime);
+														if(ret < 0)
+														{
+															dateTime.day ++;
+														}
+													}
+													if(selectedPartOfTime == 1)
+													{
+														dateTime.month --;
+														
+														ret = sceRtcGetTick(&dateTime, &fakeTime);
+														if(ret < 0)
+														{
+															dateTime.month ++;
+														}
+													}
+													if(selectedPartOfTime == 2)
+													{
+														dateTime.year --;
+														
+														ret = sceRtcGetTick(&dateTime, &fakeTime);
+														if(ret < 0)
+														{
+															dateTime.year ++;
+														}
+														if(dateTime.year < 2015)
+														{
+															dateTime.year = 2015;
+														}
+													}
+													if(selectedPartOfTime == 3)
+													{
+														dateTime.hour --;
+														
+														ret = sceRtcGetTick(&dateTime, &fakeTime);
+														if(ret < 0)
+														{
+															dateTime.hour ++;
+														}
+													}
+													if(selectedPartOfTime == 4)
+													{
+														dateTime.minute --;
+														
+														ret = sceRtcGetTick(&dateTime, &fakeTime);
+														if(ret < 0)
+														{
+															dateTime.minute ++;
+														}
+														
+													}
+													if(selectedPartOfTime == 5)
+													{
+														dateTime.second --;
+														
+														ret = sceRtcGetTick(&dateTime, &fakeTime);
+														if(ret < 0)
+														{
+															dateTime.second ++;
+														}
+													}
+													sceKernelDelayThread(150000);
+												}
+												
+												if(pad.buttons == SCE_CTRL_CROSS)
+												{
+													psvDebugScreenClear();
+
+												  printf("Unlocking trophy %i\n",selection);
+												  SceNpTrophyId id = selection;
+												  SceNpTrophyId platid;
+												  ret = setSecureTick(fakeTime.tick);
+												  if(ret < 0){
+													  printf("setSecureTick() failed. ret = 0x%x\n", ret);
+													  sceKernelDelayThread(500000);
+													  goto selectTrophyMenu;
+												  }
+												  ret = sceNpTrophyUnlockTrophy(trophyContext,handle,id,&platid);
+													if(ret < 0){
+															if(ret == 0x8055160f)
+															{
+																printf("Trophy %li is allready unlocked.\n",id);
+															}
+															else
+															{
+																printf("sceNpTrophyUnlockTrophy() failed. ret = 0x%x\n", ret);
+															}
+													}
+													else
+													{
+														printf("Successfully unlocked trophy %li\n",id);
+														
+														SceNpTrophyDetails trophyDetails = {0};
+														trophyDetails.size = sizeof(SceNpTrophyDetails);
+														sceNpTrophyGetTrophyInfo(trophyContext,handle,id,&trophyDetails,NULL);
+														memset(trophy_list[id].path,0x00,sizeof(trophy_list[id].path));
+														sprintf(trophy_list[id].path,"%.50s (%li)",trophyDetails.name,id);
+														
+													}
+													
+													sceRtcGetCurrentTick(&fakeTime);
+													ret = setSecureTick(fakeTime.tick);
+													if(ret < 0){
+														  printf("setSecureTick() failed. ret = 0x%x\n", ret);
+														  sceKernelDelayThread(500000);
+														  goto selectTrophyMenu;
+													}
+												  
+													sceKernelDelayThread(500000);
+													goto selectTrophyMenu;
+													}
+											}
+										}
+									}
+									}
+							  }
+								if (pad.buttons == SCE_CTRL_CIRCLE)
+								{
+								  sceKernelDelayThread(150000);
+								  goto TrophyMenu;
+							  }
+								if(window != oWindow)
+								{
+										psvDebugScreenClear();
+										oWindow = window;
+								  }
+							}
+						
+						
+					}
+					
+					else if(selection == 1)
+					{
+						psvDebugScreenClear(); //clear screen
+						SceNpTrophyId id = 0;
+						SceNpTrophyId platid;
+						
+						while (1)
+						{
+							ret = sceNpTrophyUnlockTrophy(trophyContext,handle,id,&platid);
+							if(ret < 0){
+									if(ret == 0x8055160f)
+									{
+										printf("Trophy %li is allready unlocked.\n",id);
+									}
+									else if(ret == 0x8055160e)
+									{
+										printf("All trophys unlocked!\n");
+										sceKernelDelayThread(500000);
+										goto TrophyMenu;
+									}
+									else
+									{
+										printf("sceNpTrophyUnlockTrophy() failed. ret = 0x%x\n", ret);
+									}
+							}
+							else
+							{
+								printf("Successfully unlocked trophy %li\n",id);
+							}
+							id ++;
+						}
+					}
+					else if(selection == 2)
 					{
 						psvDebugScreenClear();
 						ret = sceNpTrophyDestroyContext(trophyContext);
@@ -754,208 +1296,21 @@ TrophyMenu:
 						sceKernelDelayThread(150000);
 						goto start;
 					}
-					
-					if (pad.buttons == SCE_CTRL_CROSS)
-					{
-					
-						if(selection == 0)
-						{
-							//Show trophy selection menu
-							x = 1, y = 1, selection = 0, window = 0;
-							psvDebugScreenClear();
-							printf("Obtaining trophy count..");
-							SceNpTrophyGameDetails gameDetails = {0};
-							gameDetails.size = sizeof(SceNpTrophyGameDetails);
-							sceNpTrophyGetGameInfo(trophyContext,handle,&gameDetails,NULL);
-							size = gameDetails.numTrophies;
-							printf(" %i\n",size);
-							
-							paths *trophy_list = malloc(sizeof(paths)*size);
-							SceNpTrophyDetails trophyDetails = {0};
-							trophyDetails.size = sizeof(SceNpTrophyDetails);
-							printf("Obtaining trophy names...");
-							for (int i=0; i < size; i++)
-							{
-								sceNpTrophyGetTrophyInfo(trophyContext,handle,i,&trophyDetails,NULL);
-								if(strcmp((char *)trophyDetails.name,"") !=0)
-								{
-									sprintf(trophy_list[i].path,"%.50s (%i)",trophyDetails.name,i);
-								}
-								else
-								{
-									sprintf(trophy_list[i].path,"Hidden Trophy (%i)",i);
-								}
-							}
-							printf("OK!\n");
-							sceKernelDelayThread(500000);
-selectTrophyMenu:
-							psvDebugScreenClear();
-							while(1)
-								{
-									char buf[256];
-									strncpy(buf, "**** TropHax StandAlone Edition ****", sizeof(buf));
-									printf("\e[%i;%iH%s", 1, CENTERX(buf), buf);
-									strncpy(buf, "Choose a trophy:", sizeof(buf));
-									printf("\e[%i;%iH%s", 2, CENTERX(buf), buf);
-									y = 3;
-									int max = (size < WINDOW_HEIGHT) ? size : WINDOW_HEIGHT;
-									for (int i=0; i < max; i++) {
-										if (i+window == selection)
-											psvDebugScreenSetFgColor(0xFF0000);
-										printf("\e[%i;%iH%s", y, x, trophy_list[i+window].path);
-										y += 1;
-										psvDebugScreenSetFgColor(0xFFFFFF);
-									}
-									strncpy(buf, "U/D: Select Trophy  X: Unlock  O: Return", sizeof(buf));
-									printf("\e[%i;%iH%s", SCREEN_ROW, CENTERX(buf), buf);
-									memset(&pad, 0, sizeof(pad));
-									sceCtrlPeekBufferPositive(0, &pad, 1);
-									
-									if (pad.buttons == SCE_CTRL_UP)
-									{
-										if (selection <= size - WINDOW_HEIGHT){
-											window -= 1;
-										}
-										if (window < 0){
-											window = 0;
-										}
-										selection -= 1;
-										if (selection < 0)
-											selection = 0;
-										sceKernelDelayThread(150000);
-									}
-									if (pad.buttons == SCE_CTRL_DOWN)
-									{
-										if (selection >= WINDOW_HEIGHT - 1){
-											window += 1;
-										}
-										if (window > size - WINDOW_HEIGHT){
-											window = (size - WINDOW_HEIGHT < 0) ? 0 : size - WINDOW_HEIGHT;
-										}
-										selection += 1;
-										if (selection + 1 > size - 1)
-											selection = size - 1;
-										sceKernelDelayThread(150000);
-									}
-									  if (pad.buttons == SCE_CTRL_CROSS)
-									  {
-										  psvDebugScreenClear();
-										  printf("Unlocking trophy %i\n",selection);
-										  SceNpTrophyId id = selection;
-										  SceNpTrophyId platid;
-										  
-										  ret = sceNpTrophyUnlockTrophy(trophyContext,handle,id,&platid);
-											if(ret < 0){
-													if(ret == 0x8055160f)
-													{
-														printf("Trophy %li is allready unlocked.\n",id);
-													}
-													else
-													{
-														printf("sceNpTrophyUnlockTrophy() failed. ret = 0x%x\n", ret);
-													}
-											}
-											else
-											{
-												printf("Successfully unlocked trophy %li\n",id);
-												
-												SceNpTrophyDetails trophyDetails = {0};
-												trophyDetails.size = sizeof(SceNpTrophyDetails);
-												sceNpTrophyGetTrophyInfo(trophyContext,handle,id,&trophyDetails,NULL);
-												memset(trophy_list[id].path,0x00,sizeof(trophy_list[id].path));
-												sprintf(trophy_list[id].path,"%.50s (%li)",trophyDetails.name,id);
-												
-											}
-											sceKernelDelayThread(500000);
-											goto selectTrophyMenu;
-									  }
-									  if (pad.buttons == SCE_CTRL_CIRCLE)
-									  {
-										  sceKernelDelayThread(150000);
-										  goto TrophyMenu;
-									  }
-									  if(window != oWindow)
-									  {
-											psvDebugScreenClear();
-											oWindow = window;
-									  }
-								}
-							
-							
-						}
-						else if(selection == 1)
-						{
-							psvDebugScreenClear(); //clear screen
-							SceNpTrophyId id = 0;
-							SceNpTrophyId platid;
-							
-							while (1)
-							{
-							ret = sceNpTrophyUnlockTrophy(trophyContext,handle,id,&platid);
-							if(ret < 0){
-									if(ret == 0x8055160f)
-									{
-										printf("Trophy %li is allready unlocked.\n",id);
-									}
-									else if(ret == 0x8055160e)
-									{
-										printf("All trophys unlocked!\n");
-										sceKernelDelayThread(500000);
-										goto TrophyMenu;
-									}
-									else
-									{
-										printf("sceNpTrophyUnlockTrophy() failed. ret = 0x%x\n", ret);
-									}
-							}
-							else
-							{
-								printf("Successfully unlocked trophy %li\n",id);
-							}
-							id ++;
-						}
-						
-					}
-						else if(selection == 2)
-						{
-							psvDebugScreenClear();
-							ret = sceNpTrophyDestroyContext(trophyContext);
-							if(ret < 0){
-									printf("sceNpTrophyDestroyContext() failed. ret = 0x%x\n", ret);
-									while(1){};
-							}
-							
-							ret = sceNpTrophyDestroyHandle(handle);
-							if(ret < 0){
-									printf("sceNpTrophyDestroyHandle() failed. ret = 0x%x\n", ret);
-									while(1){};
-							}
-							
-							ret = sceNpTrophyTerm();
-							if(ret < 0){
-									printf("sceNpTrophyTerm() failed. ret = 0x%x\n", ret);
-									while(1){};
-							}
-							
-							
-							sceKernelStopUnloadModule(user_modid, 0, NULL, 0, NULL, NULL);
-							taiStopUnloadKernelModule(kernel_modid, 0, NULL, 0, NULL, NULL); 
-							sceKernelDelayThread(150000);
-							goto start;
-						}
 				}
+					
+			}
 		
 
                 
 
                 
 			}
+		
+		if(window != oWindow)
+		{
+			psvDebugScreenClear();
+			oWindow = window;
 		}
-	if(window != oWindow)
-	{
-		psvDebugScreenClear();
-		oWindow = window;
-	}
 	
 	}while (pad.buttons != SCE_CTRL_CIRCLE);
     

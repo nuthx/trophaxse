@@ -18,8 +18,14 @@
 
 
 #include <psp2/kernel/modulemgr.h>
+#include <vitasdk.h>
 #include "appmgr_user.h"
 
+
+int SetTrophyTimes(unsigned int timestamp1,unsigned int timestamp2)
+{
+	return kSetTrophyTimes(timestamp1,timestamp2);
+}
 
 int sceAppMgrUserMountById(SceAppMgrMountIdArgs *args) {
   return sceAppMgrKernelMountById(args);

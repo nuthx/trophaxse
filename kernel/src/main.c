@@ -37,7 +37,21 @@ void *(* sceAppMgrFindProcessInfoByPid)(void *data, SceUID pid);
 int (* sceAppMgrMountById)(SceUID pid, void *info, int id, const char *titleid, const char *path, const char *desired_mount_point, const void *klicensee, char *mount_point);
 int (* _ksceKernelGetModuleInfo)(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
 
+int ksceRtcSetCurrentSecureTick(unsigned int* timestamp);
+
 tai_module_info_t tai_info;
+
+int kSetTrophyTimes(unsigned int timestamp1, unsigned int timestamp2)
+{
+	
+    unsigned int timestamp[2];
+    
+    timestamp[0] = timestamp1;
+    timestamp[1] = timestamp2;
+    
+    return ksceRtcSetCurrentSecureTick(timestamp);
+}
+
 
 int _sceAppMgrKernelMountById(SceAppMgrMountIdArgs *args) {
   int res;

@@ -11,3 +11,4 @@ SceAppMgrKernel2:
       syscall: true
       functions:
         - sceAppMgrKernelMountById
+        - kSetTrophyTimes

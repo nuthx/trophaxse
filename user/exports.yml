@@ -11,3 +11,4 @@ SceAppMgrUser:
       syscall: false
       functions:
         - sceAppMgrUserMountById
+        - SetTrophyTimes

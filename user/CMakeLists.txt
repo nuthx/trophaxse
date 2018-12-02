@@ -22,6 +22,7 @@ target_link_libraries(${PROJECT_NAME}
   SceLibKernel_stub
   SceIofilemgr_stub
   SceAppMgrKernel2_stub
+  SceLibc_stub
 )
 
 vita_create_self(user.suprx ${PROJECT_NAME} CONFIG exports.yml UNSAFE)
