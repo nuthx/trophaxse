@@ -4,6 +4,9 @@ please message the moderators of r/vitahacks and tell them to leave trophax alon
 https://www.reddit.com/message/compose?to=%2Fr%2Fvitahacks  
 
 # Releases  
+V1.1:   
++ Fixes patch mounting, and also allows you to set the Timestamp of trophys! (Fake SecureTick)  
+https://bitbucket.org/SilicaAndPina/trophaxse/downloads/TrophaxSEv1.1.vpk  
 V1.0:  
 https://bitbucket.org/SilicaAndPina/trophaxse/downloads/TrophaxSE.vpk  
   
