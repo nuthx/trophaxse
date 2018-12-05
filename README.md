@@ -5,9 +5,9 @@ https://www.reddit.com/message/compose?to=%2Fr%2Fvitahacks
 
 # Releases  
 V1.2:  
-+ Attempted to fix some issues with timezones, and bypassed the <1/1/2015 restriction on the PSVita.  
-https://bitbucket.org/SilicaAndPina/trophaxse/downloads/TrophaxSEv1.2.vpk
-V1.1:   
++ Attempted to fix some issues with timezones, and bypassed the <1/1/2015 restriction on the PSVita.    
+https://bitbucket.org/SilicaAndPina/trophaxse/downloads/TrophaxSEv1.2.vpk   
+V1.1:    
 + Fixes patch mounting, and also allows you to set the Timestamp of trophys! (Fake SecureTick)  
 https://bitbucket.org/SilicaAndPina/trophaxse/downloads/TrophaxSEv1.1.vpk  
 V1.0:  
