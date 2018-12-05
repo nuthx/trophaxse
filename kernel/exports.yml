@@ -12,3 +12,4 @@ SceAppMgrKernel2:
       functions:
         - sceAppMgrKernelMountById
         - kSetTrophyTimes
+        - kFakeTimes

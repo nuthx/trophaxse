@@ -17,11 +17,7 @@
 */
 
 
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/io/fcntl.h>
+#include <vitasdkkern.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -29,6 +25,8 @@
 #include <taihen.h>
 
 #include "appmgr_kernel.h"
+
+#define printf ksceDebugPrintf
 
 int module_get_export_func(SceUID pid, const char *modname, uint32_t libnid, uint32_t funcnid, uintptr_t *func);
 int module_get_offset(SceUID pid, SceUID modid, int segidx, size_t offset, uintptr_t *addr);
@@ -38,19 +36,46 @@ int (* sceAppMgrMountById)(SceUID pid, void *info, int id, const char *titleid, 
 int (* _ksceKernelGetModuleInfo)(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
 
 int ksceRtcSetCurrentSecureTick(unsigned int* timestamp);
+int ksceRtcGetCurrentSecureTick(unsigned int* timestamp);
+
+static int hook = -1;
+static tai_hook_ref_t ref_hook;
 
 tai_module_info_t tai_info;
+
+int fakeTime[2];
+int spoofTime = 0;
+
+int getTimePatched(unsigned int* timestamp)
+{
+	
+	int ret;
+	ret = TAI_CONTINUE(int, ref_hook,timestamp);
+	if(spoofTime)
+	{
+		printf("[TROPHAXSE] Faking timestamp to %x%x",fakeTime[1],fakeTime[0]);
+		timestamp[0] = fakeTime[0];
+		timestamp[1] = fakeTime[1];
+	}
+	return ret;
+}
+
+int kFakeTimes(int value)
+{
+	spoofTime = value;
+	return 0;
+}
 
 int kSetTrophyTimes(unsigned int timestamp1, unsigned int timestamp2)
 {
 	
-    unsigned int timestamp[2];
     
-    timestamp[0] = timestamp1;
-    timestamp[1] = timestamp2;
+    fakeTime[0] = timestamp1;
+    fakeTime[1] = timestamp2;
     
-    return ksceRtcSetCurrentSecureTick(timestamp);
+    return 0;
 }
+
 
 
 int _sceAppMgrKernelMountById(SceAppMgrMountIdArgs *args) {
@@ -119,8 +144,14 @@ int sceAppMgrKernelMountById(SceAppMgrMountIdArgs *args) {
 
 void _start() __attribute__ ((weak, alias("module_start")));
 int module_start(SceSize args, void *argp) {
-
-
+	printf("TrophaxSE Kernel Module loaded!\n");
+	hook = taiHookFunctionExportForKernel(KERNEL_PID,
+		&ref_hook, 
+		"SceRtc",
+		0x0351D827, // SceRtcForDriver
+		0x401C0954, // ksceRtcGetCurrentSecureTick
+		getTimePatched);
+	printf("[TROPHAXSE] hook: %x\n",hook);
 
   // Get tai module info
 
@@ -150,12 +181,15 @@ int module_start(SceSize args, void *argp) {
       module_get_offset(KERNEL_PID, tai_info.modid, 0, 0x19E95, (uintptr_t *)&sceAppMgrMountById);
       break;
   }
+  
+
 
 
   return SCE_KERNEL_START_SUCCESS;
 }
 
 int module_stop(SceSize args, void *argp) {
-
+  if (hook >= 0) taiHookReleaseForKernel(hook, ref_hook);   
   return SCE_KERNEL_STOP_SUCCESS;
 }
+		

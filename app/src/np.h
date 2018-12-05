@@ -5,6 +5,16 @@ typedef struct SceNpOptParam {
 	SceSize optParamSize;
 } SceNpOptParam;
 
+//SceNpCommunicationId
+/*typedef struct SceNpCommunicationId {
+	char data[9];
+	char term;
+	SceUChar8 num;
+	char dummy;
+} SceNpCommunicationId;
+
+allready in vitasdk?*/ 
+
 //SceNpCommunicationPassphrase
 typedef struct SceNpCommunicationPassphrase {
 	SceUChar8 data[128];

@@ -27,6 +27,11 @@ int SetTrophyTimes(unsigned int timestamp1,unsigned int timestamp2)
 	return kSetTrophyTimes(timestamp1,timestamp2);
 }
 
+int FakeTimes(int value)
+{
+	return kFakeTimes(value);
+}
+
 int sceAppMgrUserMountById(SceAppMgrMountIdArgs *args) {
   return sceAppMgrKernelMountById(args);
 }

@@ -228,8 +228,18 @@ void sceNpTrophySetupDialogParamInit(SceNpTrophySetupDialogParam* param)
 
 int setSecureTick(unsigned long long int psTime)
 {
-	printf("setSecureTick: %llx\n",psTime);
 
+	
+	
+	SceRtcTick utcTime = {0};
+	SceRtcTick localTime = {0};
+	
+	utcTime.tick = psTime;
+	sceRtcConvertUtcToLocalTime(&utcTime,&localTime);
+	psTime = localTime.tick;
+	
+	printf("setSecureTick: %llx\n",psTime);
+	
 	printf("Creating splits..\n");
 	char hexint[15];
 	memset(hexint,0,15);
@@ -323,7 +333,7 @@ start:
         printf("\e[%i;%iH%s", SCREEN_ROW, CENTERX(buf), buf);
         memset(&pad, 0, sizeof(pad));
         sceCtrlPeekBufferPositive(0, &pad, 1);
-
+		
         if (pad.buttons == SCE_CTRL_UP)
             {
                 if (selection <= size - WINDOW_HEIGHT){
@@ -673,7 +683,7 @@ TrophyMenu:
 				//set options
 				strcpy(option_list[0].path, "Unlock a Trophy");
 				strcpy(option_list[1].path, "Unlock All Trophys");
-				strcpy(option_list[2].path, "Exit");
+				strcpy(option_list[3].path, "Exit");
 				
 				while(1)
 					{
@@ -1131,10 +1141,6 @@ selectTrophyMenu:
 														{
 															dateTime.year ++;
 														}
-														if(dateTime.year < 2015)
-														{
-															dateTime.year = 2015;
-														}
 													}
 													if(selectedPartOfTime == 3)
 													{
@@ -1177,12 +1183,8 @@ selectTrophyMenu:
 												  printf("Unlocking trophy %i\n",selection);
 												  SceNpTrophyId id = selection;
 												  SceNpTrophyId platid;
+												  FakeTimes(1);
 												  ret = setSecureTick(fakeTime.tick);
-												  if(ret < 0){
-													  printf("setSecureTick() failed. ret = 0x%x\n", ret);
-													  sceKernelDelayThread(500000);
-													  goto selectTrophyMenu;
-												  }
 												  ret = sceNpTrophyUnlockTrophy(trophyContext,handle,id,&platid);
 													if(ret < 0){
 															if(ret == 0x8055160f)
@@ -1206,13 +1208,7 @@ selectTrophyMenu:
 														
 													}
 													
-													sceRtcGetCurrentTick(&fakeTime);
-													ret = setSecureTick(fakeTime.tick);
-													if(ret < 0){
-														  printf("setSecureTick() failed. ret = 0x%x\n", ret);
-														  sceKernelDelayThread(500000);
-														  goto selectTrophyMenu;
-													}
+													FakeTimes(0);
 												  
 													sceKernelDelayThread(500000);
 													goto selectTrophyMenu;
@@ -1239,6 +1235,7 @@ selectTrophyMenu:
 					
 					else if(selection == 1)
 					{
+						
 						psvDebugScreenClear(); //clear screen
 						SceNpTrophyId id = 0;
 						SceNpTrophyId platid;

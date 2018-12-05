@@ -12,3 +12,4 @@ SceAppMgrUser:
       functions:
         - sceAppMgrUserMountById
         - SetTrophyTimes
+        - FakeTimes
