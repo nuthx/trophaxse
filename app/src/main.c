@@ -255,13 +255,6 @@ int setSecureTick(unsigned long long int psTime)
 int main() {
         gxm_init();
 		psvDebugScreenInit();
-		
-		
-		SceRtcTick fakeTime = {0};
-		sceRtcGetCurrentTick(&fakeTime);
-		sceRtcConvertUtcToLocalTime(&fakeTime,&fakeTime);
-		
-		
 start:
         psvDebugScreenClear();
 
@@ -950,6 +943,10 @@ selectTrophyMenu:
 											
 											SceDateTime dateTime;
 											memset(&dateTime,0x00,sizeof(SceDateTime)); 
+											
+											SceRtcTick fakeTime = {0};
+											sceRtcGetCurrentTick(&fakeTime);
+											sceRtcConvertUtcToLocalTime(&fakeTime,&fakeTime);
 											
 											sceRtcSetTick(&dateTime,&fakeTime);
 											
