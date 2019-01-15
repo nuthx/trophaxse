@@ -1,8 +1,3 @@
-# r/vitahacks trophy-hacking censorship continues!  
-u/GeeGee-E removed my post about TrophaxSE just like they did with the original trophax.suprx    
-please message the moderators of r/vitahacks and tell them to leave trophax alone. #FreeTROPHAX  
-https://www.reddit.com/message/compose?to=%2Fr%2Fvitahacks  
-
 # Releases   
 V1.3:  
 + Fixed Issues with inconsistant timestamping.  
@@ -16,6 +11,12 @@ https://bitbucket.org/SilicaAndPina/trophaxse/downloads/TrophaxSEv1.1.vpk
 V1.0:  
 https://bitbucket.org/SilicaAndPina/trophaxse/downloads/TrophaxSE.vpk  
   
+  
+# r/vitahacks trophy-hacking censorship continues!  
+u/GeeGee-E removed my post about TrophaxSE just like they did with the original trophax.suprx    
+please message the moderators of r/vitahacks and tell them to leave trophax alone. #FreeTROPHAX  
+https://www.reddit.com/message/compose?to=%2Fr%2Fvitahacks  
+
 # Will i get banned?  
 Probably not, no one has ever gotten banned on vita  
 even in the past when using other trophy hacks such as:  
