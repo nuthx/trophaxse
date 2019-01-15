@@ -3,8 +3,11 @@ u/GeeGee-E removed my post about TrophaxSE just like they did with the original 
 please message the moderators of r/vitahacks and tell them to leave trophax alone. #FreeTROPHAX  
 https://www.reddit.com/message/compose?to=%2Fr%2Fvitahacks  
 
-# Releases  
-V1.2:  
+# Releases   
+V1.3:  
++ Fixed Issues with inconsistant timestamping.  
+https://bitbucket.org/SilicaAndPina/trophaxse/downloads/TrophaxSEv1.3.vpk   
+V1.2:   
 + Attempted to fix some issues with timezones, and bypassed the <1/1/2015 restriction on the PSVita.    
 https://bitbucket.org/SilicaAndPina/trophaxse/downloads/TrophaxSEv1.2.vpk   
 V1.1:    
