@@ -215,7 +215,6 @@ int pfsMount(const char *path) {
 }
 
 
-
 void sceNpTrophySetupDialogParamInit(SceNpTrophySetupDialogParam* param)
 {
 	sceClibMemset( param, 0x0, sizeof(SceNpTrophySetupDialogParam) );
@@ -226,14 +225,10 @@ void sceNpTrophySetupDialogParamInit(SceNpTrophySetupDialogParam* param)
 }
 
 
+
+
 int setSecureTick(unsigned long long int psTime)
 {
-	SceRtcTick utcTime = {0};
-	SceRtcTick localTime = {0};
-	
-	utcTime.tick = psTime;
-	sceRtcConvertUtcToLocalTime(&utcTime,&localTime);
-	psTime = localTime.tick;
 	
 	printf("setSecureTick: %llx\n",psTime);
 	
@@ -260,6 +255,13 @@ int setSecureTick(unsigned long long int psTime)
 int main() {
         gxm_init();
 		psvDebugScreenInit();
+		
+		
+		SceRtcTick fakeTime = {0};
+		sceRtcGetCurrentTick(&fakeTime);
+		sceRtcConvertUtcToLocalTime(&fakeTime,&fakeTime);
+		
+		
 start:
         psvDebugScreenClear();
 
@@ -947,13 +949,10 @@ selectTrophyMenu:
 											int selectedPartOfTime = 0;
 											
 											SceDateTime dateTime;
-											memset(&dateTime,0x00,sizeof(SceDateTime));
-											
-
-											SceRtcTick fakeTime = {0};
-											sceRtcGetCurrentTick(&fakeTime);
+											memset(&dateTime,0x00,sizeof(SceDateTime)); 
 											
 											sceRtcSetTick(&dateTime,&fakeTime);
+											
 											while(1)
 											{
 
@@ -1104,6 +1103,7 @@ selectTrophyMenu:
 															dateTime.second --;
 														}
 													}
+													
 													sceKernelDelayThread(150000);
 												}
 												
@@ -1180,7 +1180,10 @@ selectTrophyMenu:
 												  SceNpTrophyId id = selection;
 												  SceNpTrophyId platid;
 												  FakeTimes(1);
+												  
+												  sceRtcConvertLocalTimeToUtc(&fakeTime, &fakeTime);
 												  setSecureTick(fakeTime.tick);
+												  
 												  ret = sceNpTrophyUnlockTrophy(trophyContext,handle,id,&platid);
 													if(ret < 0){
 															if(ret == 0x8055160f)
@@ -1209,6 +1212,7 @@ selectTrophyMenu:
 													sceKernelDelayThread(500000);
 													goto selectTrophyMenu;
 													}
+													;
 											}
 										}
 									}
