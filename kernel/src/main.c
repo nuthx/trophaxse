@@ -177,6 +177,7 @@ int module_start(SceSize args, void *argp) {
       break;
 	  
     case 0x321E4852: // 3.69 retail
+	case 0x700DA0CD: // 3.70 retail
       module_get_offset(KERNEL_PID, tai_info.modid, 0, 0x2DE9, (uintptr_t *)&sceAppMgrFindProcessInfoByPid);
       module_get_offset(KERNEL_PID, tai_info.modid, 0, 0x19E95, (uintptr_t *)&sceAppMgrMountById);
       break;
