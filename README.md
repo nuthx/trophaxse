@@ -1,6 +1,6 @@
 # Releases   
 V1.3:  
-+ Fixed Issues with inconsistant timestamping.  
++ Fixed Issues with inconsistant timestamping, and added support for 3.70  
 https://bitbucket.org/SilicaAndPina/trophaxse/downloads/TrophaxSEv1.3.vpk   
 V1.2:   
 + Attempted to fix some issues with timezones, and bypassed the <1/1/2015 restriction on the PSVita.    
