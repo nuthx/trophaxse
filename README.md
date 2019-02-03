@@ -1,4 +1,7 @@
 # Releases   
+V1.4:
++ Fixed an issue where the timestamp could end up being --/--/---- --:-- (0)   
+https://bitbucket.org/SilicaAndPina/trophaxse/downloads/TrophaxSEv1.4.vpk   
 V1.3:  
 + Fixed Issues with inconsistant timestamping, and added support for 3.70  
 https://bitbucket.org/SilicaAndPina/trophaxse/downloads/TrophaxSEv1.3.vpk   
