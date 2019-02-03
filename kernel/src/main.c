@@ -53,9 +53,10 @@ int getTimePatched(unsigned int* timestamp)
 	ret = TAI_CONTINUE(int, ref_hook,timestamp);
 	if(spoofTime)
 	{
-		printf("[TROPHAXSE] Faking timestamp to %x%x",fakeTime[1],fakeTime[0]);
+		printf("[TROPHAXSE] Faking timestamp to %x%x and Return 0",fakeTime[1],fakeTime[0]);
 		timestamp[0] = fakeTime[0];
 		timestamp[1] = fakeTime[1];
+		return 0;
 	}
 	return ret;
 }
