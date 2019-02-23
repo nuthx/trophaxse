@@ -16,32 +16,31 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-#include <psp2/kernel/modulemgr.h>
 #include <vitasdk.h>
 #include "appmgr_user.h"
 
-
-int SetTrophyTimes(unsigned int timestamp1,unsigned int timestamp2)
+int SetTrophyTimes(unsigned int timestamp1, unsigned int timestamp2)
 {
-	return kSetTrophyTimes(timestamp1,timestamp2);
+    return kSetTrophyTimes(timestamp1, timestamp2);
 }
 
 int FakeTimes(int value)
 {
-	return kFakeTimes(value);
+    return kFakeTimes(value);
 }
 
-int sceAppMgrUserMountById(SceAppMgrMountIdArgs *args) {
-  return sceAppMgrKernelMountById(args);
+int sceAppMgrUserMountById(SceAppMgrMountIdArgs *args)
+{
+    return sceAppMgrKernelMountById(args);
 }
 
-
-void _start() __attribute__ ((weak, alias("module_start")));
-int module_start(SceSize args, void *argp) {
-  return SCE_KERNEL_START_SUCCESS;
+void _start() __attribute__((weak, alias("module_start")));
+int module_start(SceSize args, void *argp)
+{
+    return SCE_KERNEL_START_SUCCESS;
 }
 
-int module_stop(SceSize args, void *argp) {
-  return SCE_KERNEL_STOP_SUCCESS;
+int module_stop(SceSize args, void *argp)
+{
+    return SCE_KERNEL_STOP_SUCCESS;
 }
