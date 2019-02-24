@@ -1,4 +1,5 @@
 //Defines functions relating to changing timestamps
+#include <stdint.h>
 
-int SetTrophyTimes(unsigned int timestamp1, unsigned int timestamp2);
+int SetTrophyTimes(uint64_t timestamp);
 int FakeTimes(int value);

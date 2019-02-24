@@ -19,9 +19,9 @@
 #include <vitasdk.h>
 #include "appmgr_user.h"
 
-int SetTrophyTimes(unsigned int timestamp1, unsigned int timestamp2)
+int SetTrophyTimes(uint64_t timestamp)
 {
-    return kSetTrophyTimes(timestamp1, timestamp2);
+    return kSetTrophyTimes(timestamp);
 }
 
 int FakeTimes(int value)

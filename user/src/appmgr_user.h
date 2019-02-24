@@ -1,5 +1,6 @@
 #include <appmgr_kernel.h>
+#include <stdint.h>
 
 int sceAppMgrUserMountById(SceAppMgrMountIdArgs *args);
-int kSetTrophyTimes(unsigned int timestamp1, unsigned int timestamp2);
+int kSetTrophyTimes(uint64_t timestamp);
 int kFakeTimes(int value);

@@ -228,28 +228,6 @@ void sceNpTrophySetupDialogParamInit(SceNpTrophySetupDialogParam *param)
     param->options = 0;
 }
 
-int setSecureTick(unsigned long long int psTime)
-{
-
-    printf("setSecureTick: %llx\n", psTime);
-
-    printf("Creating splits..\n");
-    char hexint[15];
-    memset(hexint, 0, 15);
-
-    sprintf(hexint, "%llx", psTime);
-
-    char ts1[7] = {hexint[0], hexint[1], hexint[2], hexint[3], hexint[4], hexint[5], 0x00};
-    unsigned long long int split1 = (unsigned int)strtoul(ts1, NULL, 16);
-    printf("Split1: %llx\n", split1);
-
-    char ts2[10] = {hexint[6], hexint[7], hexint[8], hexint[9], hexint[10], hexint[11], hexint[12], hexint[13], hexint[14], 0x00};
-    unsigned long long int split2 = (unsigned int)strtoul(ts2, NULL, 16);
-    printf("Split2: %llx\n", split2);
-
-    return SetTrophyTimes(split2, split1);
-}
-
 int main()
 {
     gxm_init();
@@ -461,11 +439,11 @@ start:
             //Try find where trophy.trp is located.
             printf("Locating trophy.trp...\n");
 
-            char location[0x1028];
-            memset(location, 0x0, 0x1028);
-            char checkPath[0x1028];
+            char location[0x300];
+            memset(location, 0x0, 0x300);
+            char checkPath[0x300];
 
-            memset(checkPath, 0x00, 0x1028);
+            memset(checkPath, 0x00, 0x300);
             sprintf(checkPath, "ux0:/app/%s/sce_sys/trophy/%s/TROPHY.TRP", titleidOfGame, commid);
 
             if (getFileSize(checkPath) >= 0)
@@ -474,7 +452,7 @@ start:
                 goto Found;
             }
 
-            memset(checkPath, 0x00, 0x1028);
+            memset(checkPath, 0x00, 0x300);
             sprintf(checkPath, "gro0:/app/%s/sce_sys/trophy/%s/TROPHY.TRP", titleidOfGame, commid);
 
             if (getFileSize(checkPath) >= 0)
@@ -482,7 +460,7 @@ start:
                 sprintf(location, "gro0:/app");
                 goto Found;
             }
-            memset(checkPath, 0x00, 0x1028);
+            memset(checkPath, 0x00, 0x300);
             sprintf(checkPath, "ur0:/app/%s/sce_sys/trophy/%s/TROPHY.TRP", titleidOfGame, commid);
 
             if (getFileSize(checkPath) >= 0)
@@ -491,7 +469,7 @@ start:
                 goto Found;
             }
 
-            memset(checkPath, 0x00, 0x1028);
+            memset(checkPath, 0x00, 0x300);
             sprintf(checkPath, "pd0:/app/%s/sce_sys/trophy/%s/TROPHY.TRP", titleidOfGame, commid);
 
             if (getFileSize(checkPath) >= 0)
@@ -1248,7 +1226,7 @@ start:
                                                     FakeTimes(1);
 
                                                     sceRtcConvertLocalTimeToUtc(&fakeTime, &fakeTime);
-                                                    setSecureTick(fakeTime.tick);
+                                                    SetTrophyTimes(fakeTime.tick);
 
                                                     ret = sceNpTrophyUnlockTrophy(trophyContext, handle, id, &platid);
                                                     if (ret < 0)

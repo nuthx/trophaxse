@@ -16,14 +16,14 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "appmgr_kernel.h"
+
 #include <vitasdkkern.h>
-
-#include <stdio.h>
-#include <string.h>
-
 #include <taihen.h>
 
-#include "appmgr_kernel.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 #define printf ksceDebugPrintf
 
@@ -42,19 +42,17 @@ static tai_hook_ref_t ref_hook;
 
 tai_module_info_t tai_info;
 
-int fakeTime[2];
+uint64_t fakeTime;
 int spoofTime = 0;
 
-int getTimePatched(unsigned int *timestamp)
+int getTimePatched(uint64_t *timestamp)
 {
-
     int ret;
     ret = TAI_CONTINUE(int, ref_hook, timestamp);
     if (spoofTime)
     {
-        printf("[TROPHAXSE] Faking timestamp to %x%x and Return 0", fakeTime[1], fakeTime[0]);
-        timestamp[0] = fakeTime[0];
-        timestamp[1] = fakeTime[1];
+        printf("[TROPHAXSE] Faking timestamp to %llx", fakeTime);
+        *timestamp = fakeTime;
         return 0;
     }
     return ret;
@@ -66,12 +64,9 @@ int kFakeTimes(int value)
     return 0;
 }
 
-int kSetTrophyTimes(unsigned int timestamp1, unsigned int timestamp2)
+int kSetTrophyTimes(uint64_t timestamp)
 {
-
-    fakeTime[0] = timestamp1;
-    fakeTime[1] = timestamp2;
-
+    fakeTime = timestamp;
     return 0;
 }
 
