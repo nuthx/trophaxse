@@ -8,8 +8,15 @@ set(VITA_VERSION  "01.00")
 set(VITA_MKSFOEX_FLAGS "${VITA_MKSFOEX_FLAGS} -d PARENTAL_LEVEL=1 -s CATEGORY=gdb")
 set(VITA_MAKE_FSELF_FLAGS "${VITA_MAKE_FSELF_FLAGS} -a 0x2808000000000000")
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-format-truncation")
+
 add_executable(${PROJECT_NAME}
   src/main.c
+  src/listbox.c src/listbox.h
+  src/textbox.c src/textbox.h
+  src/trophy.c src/trophy.h
+  src/np.h
+  src/rtc.h
 )
 
 add_dependencies(${PROJECT_NAME} user_stubs)
@@ -18,20 +25,21 @@ target_include_directories(${PROJECT_NAME}
   PRIVATE ../user/src ../kernel/src
 )
 
-target_link_directories(${PROJECT_NAME}
-  PRIVATE ${CMAKE_BINARY_DIR}/user/user_stubs
-)
-
 target_link_libraries(${PROJECT_NAME}
-	SceAppMgr_stub
-	SceCtrl_stub
-	SceDisplay_stub
-	SceGxm_stub
-	SceAppMgrUser_stub_weak
-	SceNpTrophy_stub
-	SceSysmodule_stub
-	SceCommonDialog_stub
-	taihen_stub
+  -L${CMAKE_BINARY_DIR}/user/user_stubs
+  SceAppMgrUser_stub_weak
+  vita2d
+  m
+  ScePvf_stub_weak
+  SceAppMgr_stub
+  SceAppUtil_stub
+  SceCtrl_stub
+  SceDisplay_stub
+  SceGxm_stub
+  SceNpTrophy_stub
+  SceSysmodule_stub
+  SceCommonDialog_stub
+  taihen_stub
 )
 
 vita_create_self(eboot.bin ${PROJECT_NAME} UNSAFE)

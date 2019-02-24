@@ -12,12 +12,9 @@ target_include_directories(${PROJECT_NAME}
   PRIVATE ../kernel/src
 )
 
-target_link_directories(${PROJECT_NAME}
-  PRIVATE ${CMAKE_BINARY_DIR}/kernel/kernel_stubs
-)
-
 target_link_libraries(${PROJECT_NAME}
-  libSceAppMgrKernel2_stub.a
+  -L${CMAKE_BINARY_DIR}/kernel/kernel_stubs
+  SceAppMgrKernel2_stub
 )
 
 vita_create_self(user.suprx ${PROJECT_NAME} CONFIG exports.yml UNSAFE)
