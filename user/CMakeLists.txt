@@ -6,6 +6,8 @@ add_executable(${PROJECT_NAME}
   src/main.c
 )
 
+add_dependencies(${PROJECT_NAME} kernel_stubs)
+
 target_include_directories(${PROJECT_NAME}
   PRIVATE ../kernel/src
 )
@@ -15,7 +17,7 @@ target_link_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-  ${CMAKE_BINARY_DIR}/kernel/kernel_stubs/libSceAppMgrKernel2_stub.a
+  libSceAppMgrKernel2_stub.a
 )
 
 vita_create_self(user.suprx ${PROJECT_NAME} CONFIG exports.yml UNSAFE)

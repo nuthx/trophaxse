@@ -12,6 +12,8 @@ add_executable(${PROJECT_NAME}
   src/main.c
 )
 
+add_dependencies(${PROJECT_NAME} user_stubs)
+
 target_include_directories(${PROJECT_NAME}
   PRIVATE ../user/src ../kernel/src
 )
