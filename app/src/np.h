@@ -1,8 +1,12 @@
 //define structs:
 
+#include <psp2/kernel/clib.h>
+#include <psp2/netcheck_dialog.h>
+#include <psp2/rtc.h>
+#include <psp2/types.h>
+
 //sceNpOptParam
-typedef struct SceNpOptParam
-{
+typedef struct SceNpOptParam {
     SceSize optParamSize;
 } SceNpOptParam;
 
@@ -17,20 +21,17 @@ typedef struct SceNpOptParam
 allready in vitasdk?*/
 
 //SceNpCommunicationPassphrase
-typedef struct SceNpCommunicationPassphrase
-{
+typedef struct SceNpCommunicationPassphrase {
     SceUChar8 data[128];
 } SceNpCommunicationPassphrase;
 
 //SceNpCommunicationSignature
-typedef struct SceNpCommunicationSignature
-{
+typedef struct SceNpCommunicationSignature {
     SceUChar8 data[160];
 } SceNpCommunicationSignature;
 
 //SceNpCommunicationConfig
-typedef struct SceNpCommunicationConfig
-{
+typedef struct SceNpCommunicationConfig {
     const SceNpCommunicationId *commId;
     const SceNpCommunicationPassphrase *commPassphrase;
     const SceNpCommunicationSignature *commSignature;
@@ -131,6 +132,13 @@ typedef struct SceNpTrophyGameData
     SceUInt32 progressPercentage;
 } SceNpTrophyGameData;
 
+#define SCE_NP_TROPHY_FLAG_SETSIZE         (128)
+#define SCE_NP_TROPHY_FLAG_BITS_SHIFT      (5)
+#define SCE_NP_TROPHY_FLAG_ISSET(n, p)     (p[(n) >> SCE_NP_TROPHY_FLAG_BITS_SHIFT] & (1U << ((n) & 0x1F))) != 0
+
+typedef uint32_t SceNpTrophyFlagMask;
+typedef SceNpTrophyFlagMask SceNpTrophyFlagArray[SCE_NP_TROPHY_FLAG_SETSIZE >> SCE_NP_TROPHY_FLAG_BITS_SHIFT];
+
 //functions
 
 //Define sceNpTrophySetupDialogInit
@@ -146,3 +154,13 @@ SceInt32 sceNpTrophySetupDialogGetResult(SceNpTrophySetupDialogResult *result);
 int sceNpTrophyGetTrophyInfo(SceNpTrophyContext context, SceNpTrophyHandle handle, SceNpTrophyId trophyId, SceNpTrophyDetails *details, SceNpTrophyData *data);
 //Define sceNpTrophyGetGameInfo
 int sceNpTrophyGetGameInfo(SceNpTrophyContext context, SceNpTrophyHandle handle, SceNpTrophyGameDetails *details, SceNpTrophyGameData *data);
+//Define sceNpTrophyGetTrophyUnlockState
+int sceNpTrophyGetTrophyUnlockState(SceNpTrophyContext context, SceNpTrophyHandle handle, SceNpTrophyFlagArray *flags, SceUInt32 *count);
+
+void sceNpTrophySetupDialogParamInit(SceNpTrophySetupDialogParam *param) {
+    sceClibMemset(param, 0x0, sizeof(SceNpTrophySetupDialogParam));
+    _sceCommonDialogSetMagicNumber(&param->commonParam);
+    param->sdkVersion = 0x03550011;
+    param->context = -1;
+    param->options = 0;
+}
