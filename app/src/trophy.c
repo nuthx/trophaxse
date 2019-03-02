@@ -161,6 +161,7 @@ int trophy_prepare(const char *trophyid, char game_titleid[16]) {
         memcpy(&commid, trophyid, strlen(trophyid) + 1);
         snprintf(trophy_path, 256, "ur0:user/00/trophy/data/%s/", commid);
 
+        infolog("Mounting %s for trophy unlocking use", trophy_path);
         ret = pfs_mount(trophy_path, titleid);
         if (ret < 0)
             goto Fail;
@@ -327,7 +328,6 @@ void trophy_finish() {
         trophy_context = -1;
     }
     sceNpTrophyTerm();
-    sceAppMgrUmount(current_mount);
     if (user_modid >= 0) {
         sceKernelStopUnloadModule(user_modid, 0, NULL, 0, NULL, NULL);
         user_modid = -1;
@@ -352,6 +352,7 @@ static void copy_data(trophy_detail_t *detail, SceNpTrophyDetails *trophy_detail
 
 int trophy_list(trophy_detail_t **details, int only_unlockable) {
     SceUInt32 i;
+    int count = 0;
     SceNpTrophyGameDetails game_detail = {0};
     SceNpTrophyDetails trophy_detail = {0};
     SceNpTrophyData trophy_data = {0};
@@ -369,10 +370,11 @@ int trophy_list(trophy_detail_t **details, int only_unlockable) {
         sceNpTrophyGetTrophyInfo(trophy_context, handle, i, &trophy_detail, &trophy_data);
         if (only_unlockable && (trophy_detail.trophyGrade == 1 || trophy_data.unlocked)) continue;
         copy_data(&(*details)[i], &trophy_detail, &trophy_data);
+        ++count;
     }
     sceNpTrophyDestroyHandle(handle);
     infolog("Done.\n");
-    return game_detail.numTrophies;
+    return count;
 }
 
 int trophy_unlock(trophy_detail_t *details, int index, long int *platid) {
