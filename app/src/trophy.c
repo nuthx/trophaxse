@@ -473,7 +473,7 @@ int trophy_unlock_all(int rand_days) {
         SceNpTrophyId platid = -1;
         int ret;
         if (details[i].unlocked || details[i].grade == 1) continue;
-        infolog("Unlocking trophy %s...", details[i].id, details[i].name);
+        infolog("Unlocking trophy %s...", details[i].name);
         SetTrophyTimes(ticks[i]);
         ret = sceNpTrophyUnlockTrophy(trophy_context, handle, details[i].id, &platid);
         if (ret < 0) {
