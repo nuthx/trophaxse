@@ -1,6 +1,7 @@
 #include "trophy.h"
 #include "listbox.h"
 #include "textbox.h"
+#include "dateedit.h"
 
 #include <vita2d.h>
 
@@ -29,18 +30,22 @@ typedef enum state {
     state_main_menu = 1,
     state_unlock = 2,
     state_trophy = 3,
+    state_date = 4,
 } state_t;
 
 static state_t state = state_none;
 static char title_text[128] = {};
 static listbox_t *box = NULL;
 static textbox_t *text = NULL;
+static dateedit_t *date = NULL;
 static int games_count = 0;
 static trophy_gameinfo_t *games = NULL;
 static int trophy_count = 0;
 static trophy_detail_t *trophies = NULL;
 static char game_titleid[16];
 static int curr_game = -1;
+static int cust_time = 0;
+static uint64_t last_cust_tick = 0ULL;
 static int worker_type = -1;
 static int worker_id = -1;
 static int worker_param = -1;
@@ -88,6 +93,7 @@ void unlock_menu() {
     snprintf(title_text, 128, "[%s][%s] %s", game_titleid, games[curr_game].trophyid, games[curr_game].name);
     listbox_clear(box);
     listbox_add(box, "Unlock Single", "");
+    listbox_add(box, "Unlock Single (custom date/time)", "");
     listbox_add(box, "Unlock All (Random ~5 days)", "");
     listbox_add(box, "Unlock All (Random ~15 days)", "");
     listbox_add(box, "Unlock All (Random ~30 days)", "");
@@ -121,7 +127,7 @@ int worker_trophy_list(SceSize args, void *argp) {
 
 int worker_trophy_unlock(SceSize args, void *argp) {
     long int platid = -1;
-    worker_result = trophy_unlock(trophies, worker_param, &platid);
+    worker_result = trophy_unlock(trophies, worker_param, &platid, cust_time ? last_cust_tick : 0ULL);
     worker_param |= ((int)platid+1) << 8;
     worker_id = 0;
     return sceKernelExitDeleteThread(0);
@@ -147,14 +153,16 @@ int process_ok() {
         case state_unlock: {
             int sel = listbox_sel(box);
             switch (sel) {
-                case 0: {
+                case 0:
+                case 1: {
+                    cust_time = sel;
                     worker_type = 1;
                     worker_id = sceKernelCreateThread("worker_trophy_list", worker_trophy_list, 0x10000100, 0x10000, 0, 0, NULL);
                     sceKernelStartThread(worker_id, 0, 0);
                     break;
                 }
                 default: {
-                    const int rand_days[] = {0, 5, 15, 30, 90, 180};
+                    const int rand_days[] = {0, 0, 5, 15, 30, 90, 180};
                     worker_type = 3;
                     worker_param = rand_days[sel];
                     worker_id = sceKernelCreateThread("worker_trophy_unlock_all", worker_trophy_unlock_all, 0x10000100, 0x10000, 0, 0, NULL);
@@ -167,10 +175,26 @@ int process_ok() {
         case state_trophy: {
             int sel = listbox_sel(box);
             if (sel < 0) break;
+            if (cust_time) {
+                dateedit_settick(date, last_cust_tick);
+                state = state_date;
+                break;
+            }
             worker_type = 2;
             worker_param = sel;
             worker_id = sceKernelCreateThread("worker_trophy_unlock", worker_trophy_unlock, 0x10000100, 0x10000, 0, 0, NULL);
             sceKernelStartThread(worker_id, 0, 0);
+            break;
+        }
+        case state_date: {
+            int sel = listbox_sel(box);
+            if (sel < 0) break;
+            worker_type = 2;
+            worker_param = sel;
+            last_cust_tick = dateedit_gettick(date);
+            worker_id = sceKernelCreateThread("worker_trophy_unlock", worker_trophy_unlock, 0x10000100, 0x10000, 0, 0, NULL);
+            sceKernelStartThread(worker_id, 0, 0);
+            state = state_trophy;
             break;
         }
         default: break;
@@ -187,6 +211,11 @@ int process_cancel() {
         }
         case state_trophy: {
             unlock_menu();
+            break;
+        }
+        case state_date: {
+            last_cust_tick = dateedit_gettick(date);
+            state = state_trophy;
             break;
         }
         default: break;
@@ -218,12 +247,13 @@ int main() {
     vita2d_system_pvf_config pvf_conf[2] = {{SCE_PVF_DEFAULT_LANGUAGE_CODE, is_latin}, {SCE_PVF_LANGUAGE_C, NULL}};
 
     vita2d_init();
-    vita2d_set_clear_color(RGBA8(0x40, 0x40, 0x40, 0xFF));
+    vita2d_set_clear_color(RGBA8(0x20, 0x20, 0x20, 0xFF));
 
     pvf = vita2d_load_system_pvf(2, pvf_conf);
 
     box = listbox_create(pvf, RGBA8(180,180,180,255), RGBA8(80,255,80,255), 20, 15);
     text = textbox_create(pvf, RGBA8(180,180,180,255), 20, 9);
+    date = dateedit_create(pvf, RGBA8(180,180,180,255), RGBA8(80,255,80,255), 0ULL);
 
     games_count = trophy_games_list(&games);
     main_menu();
@@ -286,13 +316,23 @@ int main() {
                     if (process_cancel()) break;
                 }
 
-                switch (pad.buttons & (SCE_CTRL_LEFT | SCE_CTRL_RIGHT | SCE_CTRL_UP | SCE_CTRL_DOWN | SCE_CTRL_L1 | SCE_CTRL_R1)) {
-                    case SCE_CTRL_LEFT: listbox_page_up(box); break;
-                    case SCE_CTRL_RIGHT: listbox_page_down(box); break;
-                    case SCE_CTRL_UP: listbox_move_up(box); break;
-                    case SCE_CTRL_DOWN: listbox_move_down(box); break;
-                    case SCE_CTRL_L1: listbox_move_begin(box); break;
-                    case SCE_CTRL_R1: listbox_move_end(box); break;
+                if (state == state_date) {
+                    switch (pad.buttons & (SCE_CTRL_LEFT | SCE_CTRL_RIGHT | SCE_CTRL_UP | SCE_CTRL_DOWN | SCE_CTRL_TRIANGLE)) {
+                        case SCE_CTRL_LEFT: dateedit_move_left(date); break;
+                        case SCE_CTRL_RIGHT: dateedit_move_right(date); break;
+                        case SCE_CTRL_UP: dateedit_increase(date); break;
+                        case SCE_CTRL_DOWN: dateedit_decrease(date); break;
+                        case SCE_CTRL_TRIANGLE: dateedit_random(date); break;
+                    }
+                } else {
+                    switch (pad.buttons & (SCE_CTRL_LEFT | SCE_CTRL_RIGHT | SCE_CTRL_UP | SCE_CTRL_DOWN | SCE_CTRL_L1 | SCE_CTRL_R1)) {
+                        case SCE_CTRL_LEFT: listbox_page_up(box); break;
+                        case SCE_CTRL_RIGHT: listbox_page_down(box); break;
+                        case SCE_CTRL_UP: listbox_move_up(box); break;
+                        case SCE_CTRL_DOWN: listbox_move_down(box); break;
+                        case SCE_CTRL_L1: listbox_move_begin(box); break;
+                        case SCE_CTRL_R1: listbox_move_end(box); break;
+                    }
                 }
             }
         }
@@ -304,6 +344,10 @@ int main() {
         vita2d_pvf_draw_text(pvf, 20, 25, RGBA8(225, 225, 225, 255), 1.f, title_text);
         listbox_draw(box, 20, 48, 20, 350);
         textbox_draw(text, 20, 374);
+        if (state == state_date) {
+            vita2d_draw_rectangle(100, 100, 240, 27, RGBA8(0x50, 0x50, 0x50, 0xFF));
+            dateedit_draw(date, 105, 120);
+        }
 
         vita2d_end_drawing();
         vita2d_swap_buffers();
@@ -311,6 +355,7 @@ int main() {
     if (trophies) { free(trophies); trophies = NULL; trophy_count = 0; }
     if (games) { free(games); games = NULL; games_count = 0; }
 
+    dateedit_destroy(date);
     textbox_destroy(text);
     listbox_destroy(box);
 

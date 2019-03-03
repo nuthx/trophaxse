@@ -12,11 +12,11 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-format-truncation")
 
 add_executable(${PROJECT_NAME}
   src/main.c
+  src/np.h src/rtc.h
+  src/dateedit.c src/dateedit.h
   src/listbox.c src/listbox.h
   src/textbox.c src/textbox.h
   src/trophy.c src/trophy.h
-  src/np.h
-  src/rtc.h
 )
 
 add_dependencies(${PROJECT_NAME} user_stubs)

@@ -379,16 +379,22 @@ int trophy_list(trophy_detail_t **details, int only_unlockable) {
     return count;
 }
 
-int trophy_unlock(trophy_detail_t *details, int index, long int *platid) {
+int trophy_unlock(trophy_detail_t *details, int index, long int *platid, uint64_t cust_tick) {
     *platid = -1;
     SceNpTrophyHandle handle;
     int ret;
     trophy_detail_t *detail = &details[index];
 
     infolog("Unlocking trophy...");
+    if (cust_tick) {
+        FakeTimes(1);
+        SetTrophyTimes(cust_tick);
+    }
     sceNpTrophyCreateHandle(&handle);
     ret = sceNpTrophyUnlockTrophy(trophy_context, handle, detail->id, platid);
     sceNpTrophyDestroyHandle(handle);
+    if (cust_tick)
+        FakeTimes(0);
     if (ret < 0) {
         switch (ret) {
             case 0x8055160f:
