@@ -131,6 +131,7 @@ int trophy_prepare(const char *trophyid, char game_titleid[16]) {
     SceUChar8 commsign[160] = {};
     char titleid[16] = {};
     char path[256] = {};
+    int prepared_before = 0;
 
     infolog("Searching game for trophy id %s", trophyid);
 
@@ -161,7 +162,6 @@ int trophy_prepare(const char *trophyid, char game_titleid[16]) {
         memcpy(&commid, trophyid, strlen(trophyid) + 1);
         snprintf(trophy_path, 256, "ur0:user/00/trophy/data/%s/", commid);
 
-        infolog("Mounting %s for trophy unlocking use", trophy_path);
         ret = pfs_mount(trophy_path, titleid);
         if (ret < 0)
             goto Fail;
@@ -172,6 +172,7 @@ int trophy_prepare(const char *trophyid, char game_titleid[16]) {
         sceIoLseek(fd, 0x290, SCE_SEEK_SET);
         sceIoRead(fd, game_titleid, 0x0A);
         if (memcmp(game_titleid, "TROPHAXSE", 9) == 0) {
+            prepared_before = 1;
             sceIoLseek(fd, 0x2D0, SCE_SEEK_SET);
             sceIoRead(fd, game_titleid, 0x0A);
         }
@@ -186,20 +187,19 @@ int trophy_prepare(const char *trophyid, char game_titleid[16]) {
         sceAppMgrUmount(current_mount);
     }
 
-    {
+    do {
         char location[256] = {};
         char check_path[256] = {};
+        int size;
 
         snprintf(check_path, 256, "ux0:/app/%s/sce_sys/trophy/%s/TROPHY.TRP", game_titleid, commid);
-        if (get_file_size(check_path) >= 0)
-        {
+        if (get_file_size(check_path) >= 0) {
             sprintf(location, "ux0:/app");
             goto Found;
         }
 
         snprintf(check_path, 256, "gro0:/app/%s/sce_sys/trophy/%s/TROPHY.TRP", game_titleid, commid);
-        if (get_file_size(check_path) >= 0)
-        {
+        if (get_file_size(check_path) >= 0) {
             sprintf(location, "gro0:/app");
             goto Found;
         }
@@ -216,7 +216,15 @@ int trophy_prepare(const char *trophyid, char game_titleid[16]) {
             goto Found;
         }
         infolog("Cound not find %s (Possibly game not installed?)\n", game_titleid);
-        goto Fail;
+        if (prepared_before) {
+            sceIoMkdir(path, 0006);
+            snprintf(path, 256, "ux0:app/%s/sce_sys/trophy/%s/TROPHY.TRP", titleid, commid);
+            size = get_file_size(path);
+            if (size > 0) {
+                infolog("But %s(%s) is already prepared for unlocking\n", commid, game_titleid);
+                break;
+            }
+        } else goto Fail;
 
     Found:
         infolog("Found - %s is in %s/%s\n", commid, location, game_titleid);
@@ -224,10 +232,7 @@ int trophy_prepare(const char *trophyid, char game_titleid[16]) {
         snprintf(path, 256, "%s/%s", location, game_titleid);
         ret = sceAppMgrGameDataMount(path, 0, 0, current_mount); //GameDataMount mounts WITH patches, so no need to check for them
         if (ret < 0) goto Fail;
-    }
 
-    {
-        int size;
         snprintf(path, 256, "%s/sce_sys/trophy/%s/TROPHY.TRP", current_mount, commid);
         size = get_file_size(path);
         if (size < 0) goto Fail;
@@ -244,13 +249,11 @@ int trophy_prepare(const char *trophyid, char game_titleid[16]) {
             snprintf(path, 256, "ux0:app/%s/sce_sys/trophy/%s/TROPHY.TRP", titleid, commid);
             ret = write_file(path, trpfile, size);
             free(trpfile);
-            char n[16];
-            snprintf(n, 16, "\n%X\n", ret);
             if (ret < 0) goto Fail;
         }
-    }
-    ret = sceAppMgrUmount(current_mount);
-    if (ret < 0) goto Fail;
+        ret = sceAppMgrUmount(current_mount);
+        if (ret < 0) goto Fail;
+    } while(0);
 
     // remount app0
     // CelesteBlue TAKE NOTES.
@@ -369,8 +372,7 @@ int trophy_list(trophy_detail_t **details, int only_unlockable) {
     for (i = 0; i < game_detail.numTrophies; i++) {
         sceNpTrophyGetTrophyInfo(trophy_context, handle, i, &trophy_detail, &trophy_data);
         if (only_unlockable && (trophy_detail.trophyGrade == 1 || trophy_data.unlocked)) continue;
-        copy_data(&(*details)[i], &trophy_detail, &trophy_data);
-        ++count;
+        copy_data(&(*details)[count++], &trophy_detail, &trophy_data);
     }
     sceNpTrophyDestroyHandle(handle);
     infolog("Done.\n");
@@ -465,7 +467,7 @@ int trophy_unlock_all(int rand_days) {
         SceNpTrophyId platid = -1;
         int ret;
         if (details[i].unlocked || details[i].grade == 1) continue;
-        infolog("Unlocking trophy [%d] %s...", details[i].id, details[i].name);
+        infolog("Unlocking trophy %s...", details[i].id, details[i].name);
         SetTrophyTimes(ticks[i]);
         ret = sceNpTrophyUnlockTrophy(trophy_context, handle, details[i].id, &platid);
         if (ret < 0) {
