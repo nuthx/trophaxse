@@ -134,7 +134,7 @@ int worker_trophy_unlock(SceSize args, void *argp) {
 }
 
 int worker_trophy_unlock_all(SceSize args, void *argp) {
-    worker_result = trophy_unlock_all(worker_param);
+    worker_result = trophy_unlock_all(worker_param, cust_time ? last_cust_tick : 0ULL);
     worker_id = 0;
     return sceKernelExitDeleteThread(0);
 }
@@ -162,11 +162,8 @@ int process_ok() {
                     break;
                 }
                 default: {
-                    const int rand_days[] = {0, 0, 5, 15, 30, 90, 180};
-                    worker_type = 3;
-                    worker_param = rand_days[sel];
-                    worker_id = sceKernelCreateThread("worker_trophy_unlock_all", worker_trophy_unlock_all, 0x10000100, 0x10000, 0, 0, NULL);
-                    sceKernelStartThread(worker_id, 0, 0);
+                    cust_time = sel;
+                    state = state_date;
                     break;
                 }
             }
@@ -189,12 +186,21 @@ int process_ok() {
         case state_date: {
             int sel = listbox_sel(box);
             if (sel < 0) break;
-            worker_type = 2;
-            worker_param = sel;
             last_cust_tick = dateedit_gettick(date);
-            worker_id = sceKernelCreateThread("worker_trophy_unlock", worker_trophy_unlock, 0x10000100, 0x10000, 0, 0, NULL);
-            sceKernelStartThread(worker_id, 0, 0);
-            state = state_trophy;
+            if (cust_time == 1) {
+                worker_type = 2;
+                worker_param = sel;
+                worker_id = sceKernelCreateThread("worker_trophy_unlock", worker_trophy_unlock, 0x10000100, 0x10000, 0, 0, NULL);
+                sceKernelStartThread(worker_id, 0, 0);
+                state = state_trophy;
+            } else {
+                const int rand_days[] = {0, 0, 5, 15, 30, 90, 180};
+                worker_type = 3;
+                worker_param = rand_days[cust_time];
+                worker_id = sceKernelCreateThread("worker_trophy_unlock_all", worker_trophy_unlock_all, 0x10000100, 0x10000, 0, 0, NULL);
+                sceKernelStartThread(worker_id, 0, 0);
+                state = state_unlock;
+            }
             break;
         }
         default: break;

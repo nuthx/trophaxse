@@ -447,7 +447,7 @@ uint64_t rand64() {
     return (uint64_t)(rand() & 0xFFFF) | ((uint64_t)(rand() & 0xFFFF) << 16) | ((uint64_t)(rand() & 0xFFFF) << 32) | ((uint64_t)(rand() & 0xFFFF) << 48);
 }
 
-int trophy_unlock_all(int rand_days) {
+int trophy_unlock_all(int rand_days, uint64_t cust_tick) {
     trophy_detail_t *details;
     SceRtcTick tick;
     SceNpTrophyHandle handle;
@@ -462,6 +462,7 @@ int trophy_unlock_all(int rand_days) {
     qsort(details, count, sizeof(trophy_detail_t), sort_trophy_detail);
     sceRtcGetCurrentTickUtc(&tick);
     srand((unsigned int)tick.tick);
+    if (cust_tick) tick.tick = cust_tick;
     for (i = 0; i < count; ++i) {
         ticks[i] = tick.tick - (rand64() % range);
     }
