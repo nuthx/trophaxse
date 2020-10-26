@@ -126,7 +126,7 @@ int worker_trophy_list(SceSize args, void *argp) {
 }
 
 int worker_trophy_unlock(SceSize args, void *argp) {
-    long int platid = -1;
+    int platid = -1;
     worker_result = trophy_unlock(trophies, worker_param, &platid, cust_time ? last_cust_tick : 0ULL);
     worker_param |= ((int)platid+1) << 8;
     worker_id = 0;

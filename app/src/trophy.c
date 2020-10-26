@@ -347,9 +347,9 @@ static void copy_data(trophy_detail_t *detail, SceNpTrophyDetails *trophy_detail
     detail->grade = trophy_detail->trophyGrade;
     detail->unlocked = trophy_data->unlocked;
     if (trophy_detail->hidden && trophy_detail->name[0] == 0)
-        snprintf(detail->name, 128, "%lu. Hidden Trophy", trophy_detail->trophyId);
+        snprintf(detail->name, 128, "%u. Hidden Trophy", trophy_detail->trophyId);
     else
-        snprintf(detail->name, 128, "%lu. %s[%s] %s", trophy_detail->trophyId, trophy_data->unlocked ? "(Unlocked)" : "", grade_str[trophy_detail->trophyGrade], trophy_detail->name);
+        snprintf(detail->name, 128, "%u. %s[%s] %s", trophy_detail->trophyId, trophy_data->unlocked ? "(Unlocked)" : "", grade_str[trophy_detail->trophyGrade], trophy_detail->name);
     snprintf(detail->description, 128, "%s", trophy_detail->description);
 }
 
@@ -379,7 +379,7 @@ int trophy_list(trophy_detail_t **details, int only_unlockable) {
     return count;
 }
 
-int trophy_unlock(trophy_detail_t *details, int index, long int *platid, uint64_t cust_tick) {
+int trophy_unlock(trophy_detail_t *details, int index, int *platid, uint64_t cust_tick) {
     *platid = -1;
     SceNpTrophyHandle handle;
     int ret;

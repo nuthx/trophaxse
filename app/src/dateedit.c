@@ -71,8 +71,8 @@ void dateedit_settick(dateedit_t *edit, uint64_t tick) {
 
 uint64_t dateedit_gettick(dateedit_t *edit) {
     SceRtcTick t;
-    sceRtcConvertDateTimeToTick(&edit->time, &t);
     edit->time.microsecond = 0;
+    sceRtcConvertDateTimeToTick(&edit->time, &t);
     sceRtcConvertLocalTimeToUtc(&t, &t);
     return t.tick;
 }
