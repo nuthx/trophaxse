@@ -24,3 +24,5 @@ void trophy_finish();
 int trophy_list(trophy_detail_t **details, int only_unlockable);
 int trophy_unlock(trophy_detail_t *details, int index, int *platid, uint64_t cust_tick);
 int trophy_unlock_all(int rand_days, uint64_t cust_tick);
+int trophy_unlock_all_pattern(uint64_t cust_tick);
+int trophy_has_pattern();

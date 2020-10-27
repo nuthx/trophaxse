@@ -99,6 +99,9 @@ void unlock_menu() {
     listbox_add(box, "Unlock All (Random ~30 days)", "");
     listbox_add(box, "Unlock All (Random ~90 days)", "");
     listbox_add(box, "Unlock All (Random ~180 days)", "");
+    if (trophy_has_pattern()) {
+        listbox_add(box, "Unlock All with txt pattern", "");
+    }
     state = state_unlock;
 }
 
@@ -135,6 +138,12 @@ int worker_trophy_unlock(SceSize args, void *argp) {
 
 int worker_trophy_unlock_all(SceSize args, void *argp) {
     worker_result = trophy_unlock_all(worker_param, cust_time ? last_cust_tick : 0ULL);
+    worker_id = 0;
+    return sceKernelExitDeleteThread(0);
+}
+
+int worker_trophy_unlock_pattern(SceSize args, void *argp) {
+    worker_result = trophy_unlock_all_pattern(cust_time ? last_cust_tick : 0ULL);
     worker_id = 0;
     return sceKernelExitDeleteThread(0);
 }
@@ -184,22 +193,36 @@ int process_ok() {
             break;
         }
         case state_date: {
-            int sel = listbox_sel(box);
-            if (sel < 0) break;
             last_cust_tick = dateedit_gettick(date);
-            if (cust_time == 1) {
+            switch (cust_time) {
+            case 1: {
+                int sel = listbox_sel(box);
+                if (sel < 0) break;
                 worker_type = 2;
                 worker_param = sel;
                 worker_id = sceKernelCreateThread("worker_trophy_unlock", worker_trophy_unlock, 0x10000100, 0x10000, 0, 0, NULL);
                 sceKernelStartThread(worker_id, 0, 0);
                 state = state_trophy;
-            } else {
+                break;
+            }
+            case 7: {
+                int sel = listbox_sel(box);
+                if (sel < 0) break;
+                worker_type = 4;
+                worker_id = sceKernelCreateThread("worker_trophy_unlock_pattern", worker_trophy_unlock_pattern, 0x10000100, 0x10000, 0, 0, NULL);
+                sceKernelStartThread(worker_id, 0, 0);
+                state = state_trophy;
+                break;
+            }
+            default: {
                 const int rand_days[] = {0, 0, 5, 15, 30, 90, 180};
                 worker_type = 3;
                 worker_param = rand_days[cust_time];
                 worker_id = sceKernelCreateThread("worker_trophy_unlock_all", worker_trophy_unlock_all, 0x10000100, 0x10000, 0, 0, NULL);
                 sceKernelStartThread(worker_id, 0, 0);
                 state = state_unlock;
+                break;
+            }
             }
             break;
         }

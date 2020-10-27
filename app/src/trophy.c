@@ -22,12 +22,66 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 static int kernel_modid = -1, user_modid = -1;
 static char current_mount[16] = {};
 static SceNpTrophyContext trophy_context = -1;
+typedef struct {
+    SceNpTrophyId id;
+    int grade;
+    int time_delta;
+    time_t time_got;
+} trophy_pattern_t;
+trophy_pattern_t patterns[256] = {};
+int pattern_count = 0;
 
 extern int infolog(const char *str, ...);
+
+static void trophy_patterns_reset() {
+    pattern_count = 0;
+}
+
+static void trophy_patterns_add(char *line) {
+    int index = 0;
+    char *token = strtok(line, ",");
+    while (token != NULL) {
+        switch (index) {
+        case 0:
+            patterns[pattern_count].id = atoi(token) - 1;
+            break;
+        case 1:
+            if (strcmp(line, "platinum") == 0) return;
+            if (strcmp(line, "gold") == 0)
+                patterns[pattern_count].grade = 2;
+            else if (strcmp(line, "silver") == 0)
+                patterns[pattern_count].grade = 3;
+            else
+                patterns[pattern_count].grade = 4;
+            break;
+        case 3:
+            patterns[pattern_count].time_got = strtoul(token, NULL, 10);
+            break;
+        }
+        token = strtok(NULL, ",");
+        ++index;
+    }
+    if (index > 3)
+        ++pattern_count;
+}
+
+static void trophy_patterns_finish() {
+    int i;
+    time_t max_time = 0;
+    for (i = 0; i < pattern_count; ++i) {
+        if (max_time < patterns[i].time_got) {
+            max_time = patterns[i].time_got;
+        }
+    }
+    for (i = 0; i < pattern_count; ++i) {
+        patterns[i].time_delta = max_time - patterns[i].time_got;
+    }
+}
 
 void *read_file(const char *file, int *size) {
     int file_size;
@@ -313,6 +367,29 @@ int trophy_prepare(const char *trophyid, char game_titleid[16]) {
 
         if (setupResult.result != SCE_COMMON_DIALOG_RESULT_OK) goto Fail;
     }
+
+    trophy_patterns_reset();
+    {
+        char *trppat;
+        int size;
+        snprintf(path, 256, "ux0:data/trophaxse/%s.txt", game_titleid);
+        trppat = read_file(path, &size);
+        if (trppat != NULL) {
+            char *ptr = trppat;
+            int need_break = 0;
+            while (1) {
+                size_t pos = strcspn(ptr, "\r\n");
+                need_break = *(ptr + pos) == 0;
+                if (!need_break) *(ptr + pos) = 0;
+                trophy_patterns_add(ptr);
+                if (need_break) break;
+                ptr = ptr + pos + 1;
+            }
+            free(trppat);
+            trophy_patterns_finish();
+        }
+    }
+
     infolog("Finished.");
     return 0;
 
@@ -448,7 +525,7 @@ uint64_t rand64() {
 }
 
 int trophy_unlock_all(int rand_days, uint64_t cust_tick) {
-    trophy_detail_t *details;
+    trophy_detail_t *details = NULL;
     SceRtcTick tick;
     SceNpTrophyHandle handle;
     uint64_t range = (uint64_t)rand_days * 86400 * (uint64_t)sceRtcGetTickResolution();
@@ -494,4 +571,56 @@ int trophy_unlock_all(int rand_days, uint64_t cust_tick) {
     free(ticks);
     free(details);
     return 0;
+}
+
+int trophy_unlock_all_pattern(uint64_t cust_tick) {
+    int i;
+    SceRtcTick tick;
+    SceNpTrophyHandle handle;
+    uint64_t sec_ticks = (uint64_t)sceRtcGetTickResolution();
+    trophy_detail_t *details = NULL;
+    int count = trophy_list(&details, 1);
+    if (count <= 0) {
+        if (details) free(details);
+        return -1;
+    }
+    sceRtcGetCurrentTickUtc(&tick);
+    if (cust_tick) tick.tick = cust_tick;
+    sceNpTrophyCreateHandle(&handle);
+    FakeTimes(1);
+    for (i = 0; i < count; ++i) {
+        int j;
+        SceNpTrophyId trpid = patterns[i].id;
+        uint64_t time_delta = sec_ticks * (uint64_t)patterns[i].time_delta;
+        for (j = 0; j < count; ++j) {
+            if (details[j].id == trpid) {
+                SceNpTrophyId platid = -1;
+                int ret;
+                if (details[j].unlocked || details[j].grade == 1) break;
+                infolog("Unlocking trophy %s...", details[j].name);
+                SetTrophyTimes(tick.tick - time_delta);
+                ret = sceNpTrophyUnlockTrophy(trophy_context, handle, trpid, &platid);
+                if (ret < 0) {
+                    switch (ret) {
+                        case 0x8055160f:
+                        case 0x80551610:
+                            break;
+                        default:
+                            infolog("sceNpTrophyUnlockTrophy() failed for %d. ret = 0x%x", i, ret);
+                            break;
+                    }
+                }
+                break;
+            }
+        }
+    }
+    sceNpTrophyDestroyHandle(handle);
+    infolog("Done.");
+    FakeTimes(0);
+    free(details);
+    return 0;
+}
+
+int trophy_has_pattern() {
+    return pattern_count > 0;
 }
